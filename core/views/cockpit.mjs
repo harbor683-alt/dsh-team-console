@@ -83,8 +83,8 @@ function statusZone(teams) {
   const legend = MEMBER_ORDER.map((k) =>
     '<span class="v2-legend"><span class="v2-dot v2-st--' + k + '"></span>' + MEMBER_LABEL[k] + ' <span class="v2-num">' + counts[k] + '</span></span>'
   ).join('');
-  return '<section class="cockpit-zone" id="c-status"><div class="v2-section__title">① 状态区 · 队伍在岗情况（颜色 = 状态，悬停看当前任务）</div>' +
-    '<div class="cockpit-card"><div class="v2-statusbar">' +
+  return '<section class="cockpit-zone" id="c-status"><div class="v2-section__title">队伍在岗</div>' +
+    '<div class="cockpit-card" title="方块颜色 = 状态，悬停看当前任务"><div class="v2-statusbar">' +
     (blocks.length ? blocks.join('') : '<span class="cockpit-empty">暂无团队角色 — 当前工作区尚未建立 .agent-teams 团队</span>') +
     '</div><div class="v2-statusbar" style="margin-top:6px">' + legend + '</div></div></section>';
 }
@@ -131,7 +131,7 @@ function metricsZone(opts, now) {
     '—（暂缓）',
     '资源消耗数据层未建立（计划书第 9 章，本阶段暂缓）。按 9.5 不猜不补不藏'
   );
-  return '<section class="cockpit-zone" id="c-metrics"><div class="v2-section__title">② 指标区 · 整体健康度</div>' +
+  return '<section class="cockpit-zone" id="c-metrics"><div class="v2-section__title">整体健康</div>' +
     '<div class="metrics">' + m1 + m2 + m3 + m4 + m5 + '</div></section>';
 }
 
@@ -169,7 +169,7 @@ function todoZone(opts, now) {
       ? '<div class="stream">' + rows + more + '</div>'
       : '<div class="cockpit-empty">暂无异常任务 — 当前没有 failed 状态的任务</div>'
   );
-  return '<section class="cockpit-zone" id="c-todo"><div class="v2-section__title">③ 待办区 · 等我处理（按紧急度排序，行内直接处理）</div>' +
+  return '<section class="cockpit-zone" id="c-todo"><div class="v2-section__title">等我处理</div>' +
     '<div class="todo-grid">' + colDecision + colReview + colError + '</div></section>';
 }
 
@@ -207,7 +207,7 @@ function streamZone(opts, now) {
         '</div>'
       ).join('')
     : '<div class="cockpit-empty">暂无动态 — 事件流尚未产生记录（任务状态变更与团队消息会自动出现在这里）</div>';
-  return '<section class="cockpit-zone" id="c-stream"><div class="v2-section__title">④ 动态流 · 正在发生（时间倒序，默认只显示关键事件）</div>' +
+  return '<section class="cockpit-zone" id="c-stream"><div class="v2-section__title">正在发生</div>' +
     '<div class="cockpit-card stream">' + inner + '</div></section>';
 }
 

@@ -440,6 +440,23 @@ const server = http.createServer(async (req, res) => {
         spaces: listWorkspaces(),
         qs: wsQS(url, ws),
         demo: url.searchParams.has('demo'),
+        counts: (() => {
+          // 与驾驶舱"队伍在岗"同源：按团队成员状态计数，保证两处数字一致
+          const c = { idle: 0, running: 0, done: 0, error: 0, decision: 0, archived: 0 };
+          const key = (s) => {
+            const st = String(s || '').toLowerCase();
+            if (st === 'working' || st === 'busy' || st === 'running') return 'running';
+            if (st === 'done' || st === 'completed' || st === 'complete') return 'done';
+            if (st === 'failed' || st === 'error' || st === 'blocked') return 'error';
+            if (st === 'waiting' || st === 'paused' || st === 'decision') return 'decision';
+            if (st === 'archived') return 'archived';
+            return 'idle';
+          };
+          loadTeams(ws.path).forEach((t) => {
+            (t.members || []).forEach((m) => { c[key(m.status)] += 1; });
+          });
+          return c;
+        })(),
       });
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(html);
