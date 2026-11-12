@@ -32,25 +32,33 @@ export function embedCss() {
     + '.v2-metric{display:block!important}'
     + '.v2-metric__label{display:block!important;font-size:13px!important;font-weight:400!important;'
     + 'color:#61666b!important;margin:0 0 4px!important}'
-    + '.v2-metric__value{display:block!important;font-size:24px!important;font-weight:400!important;'
-    + 'line-height:1.15!important;color:#0f1115!important;font-variant-numeric:tabular-nums}'
+    + '.v2-metric__value{display:block!important;font-size:26px!important;font-weight:400!important;'
+    + 'line-height:1.1!important;letter-spacing:-.2px!important;color:#0f1115!important;font-variant-numeric:tabular-nums}'
     + '.metric-note{font-size:12px!important;color:#61666b!important;margin-top:6px!important;line-height:1.5!important}'
     + '.todo-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:16px!important}'
     + '.todo-col-title{font-size:13px!important;font-weight:600!important;color:#61666b!important;margin:0 0 8px!important}'
-    + '.cockpit-empty{border:1px dashed rgba(0,0,0,.10)!important;border-radius:10px!important;'
-    + 'background:#fafafa!important;color:#61666b!important;font-size:13px!important;padding:14px 16px!important}'
+    + '.cockpit-empty{display:block!important;width:100%!important;border:1px solid rgba(0,0,0,.08)!important;border-radius:10px!important;'
+    + 'background:#fafafa!important;color:#61666b!important;font-size:13px!important;line-height:1.6!important;'
+    + 'padding:14px 16px!important;white-space:normal!important;overflow-wrap:anywhere!important}'
     + '.v2-tag{font-size:12px!important;border-radius:999px!important}'
-    /* 角色小方块：10×10 圆角 2，颜色即状态 */
-    + '.v2-statusbar__cell{width:10px!important;min-width:10px!important;height:10px!important;'
-    + 'align-self:center!important;border-radius:2px!important}'
-    + '.v2-statusbar{align-items:center!important;gap:5px!important}'
+    /* 角色小方块：12×12 圆角 3，颜色即状态 */
+    + '.v2-statusbar__cell{width:12px!important;min-width:12px!important;height:12px!important;'
+    + 'align-self:center!important;border-radius:3px!important}'
+    + '.v2-statusbar{align-items:center!important;gap:6px!important;flex-wrap:wrap!important}'
     + '.v2-statusbar .v2-hoverable{display:inline-flex!important;align-items:center!important}'
+    + '.v2-legend{font-size:12px!important;color:#61666b!important}'
     + '.v2-btn,.v2-btn--primary{font-size:13px!important;height:32px!important;border-radius:8px!important}'
     + '.ta-view__hint,.ds-hint{font-size:13px!important;color:#61666b!important}'
     /* 动态流里的事件类型标签降为中性，颜色只留给状态点 */
     + '.stream .v2-tag{background:#f1f3f5!important;border-color:transparent!important;color:#61666b!important}'
     + '.stream{font-size:13px!important}'
-    + '.stream .v2-item{padding:8px 0!important;border-bottom:1px solid rgba(0,0,0,.06)!important}'
+    + '.stream .v2-item{padding:9px 8px!important;border-bottom:1px solid rgba(0,0,0,.06)!important;'
+    + 'border-radius:6px!important}'
+    + '.stream .v2-item:hover{background:#fafafa!important}'
+    /* 段与段之间的呼吸：驾驶舱内部的四个区 */
+    + '.cockpit-zone+.cockpit-zone{margin-top:22px!important}'
+    + '.ta-card{border-radius:12px!important;padding:14px 16px!important}'
+    + '.ds-node{border-radius:10px!important}'
     + '@media (max-width:900px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}'
     + '.metrics>.cockpit-card:last-child:nth-child(odd){grid-column:1/-1!important}'
     + '.todo-grid{grid-template-columns:1fr!important}}'
@@ -103,8 +111,15 @@ function spineHtml(counts) {
   return '<span class="spine" title="' + summary + '">' + segs + '</span>';
 }
 
-export function renderShell({ ws, spaces = [], qs = '', demo = false, counts = {} }) {
+const ICONS = {"sec-cockpit":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"6\"/><path d=\"M8 8l3-2.4\"/></svg>","sec-stage":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M3.5 2.5h6l3 3v8h-9z\"/><path d=\"M9.5 2.5v3h3\"/><path d=\"M5.5 9h5\"/></svg>","sec-team":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" aria-hidden=\"true\"><rect x=\"6\" y=\"1.8\" width=\"4\" height=\"3\" rx=\"1\"/><rect x=\"1.6\" y=\"11\" width=\"4\" height=\"3\" rx=\"1\"/><rect x=\"10.4\" y=\"11\" width=\"4\" height=\"3\" rx=\"1\"/><path d=\"M8 4.8v3.4M4 11V9.6h8V11\"/></svg>","sec-deps":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M2 4.5h6M6 11.5h8\"/><circle cx=\"9\" cy=\"4.5\" r=\"1.4\"/><circle cx=\"5\" cy=\"11.5\" r=\"1.4\"/></svg>"};
+
+export function renderShell({ ws, spaces = [], qs = '', demo = false, counts = {}, taskCount = 0 }) {
   const wsq = qs || ('?ws=' + encodeURIComponent(ws.id || ws.path || ''));
+  const members = ['running', 'done', 'error', 'decision', 'idle', 'archived']
+    .reduce((s, k) => s + (counts[k] || 0), 0);
+  const metaLine = (members ? members + ' 名成员' : '暂无团队角色')
+    + ' · ' + (taskCount || 0) + ' 项任务'
+    + (demo ? ' · 演示数据' : '');
   const sep = wsq.includes('?') ? '&' : '?';
   const embed = (p) => esc2(p + wsq + sep + 'embed=1');
   const standalone = (p) => esc2(p + wsq);
@@ -117,7 +132,7 @@ export function renderShell({ ws, spaces = [], qs = '', demo = false, counts = {
     + '<style>'
     + ':root{--ink:#0f1115;--body:#353638;--muted:#61666b;--rule:rgba(0,0,0,.08);'
     + '--rule-strong:rgba(0,0,0,.16);--chrome:#f5f7fa;--sheet:#fff;--tray:#fafafa;'
-    + '--run:#4176e6;--done:#22c55e;--bad:#ef4444;--warn:#f59e0b;--idle:#979da6}'
+    + '--run:#4176e6;--done:#22c55e;--bad:#ef4444;--warn:#f59e0b;--idle:#979da6;--accent:#4e6ef2;--accent-strong:#3b5bdb}'
     + '*{box-sizing:border-box}'
     + 'html,body{margin:0;background:var(--chrome);color:var(--body);'
     + 'font:14px/1.6 -apple-system,"Segoe UI",system-ui,"Microsoft YaHei",sans-serif;'
@@ -133,25 +148,26 @@ export function renderShell({ ws, spaces = [], qs = '', demo = false, counts = {
     + '.wswrap b{color:var(--ink);font-weight:600}'
     + '.wswrap .path{max-width:32ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
     + '.wswrap a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent}'
-    + '.wswrap a:hover{color:var(--ink);border-bottom-color:var(--rule-strong)}'
-    + '.spine{display:inline-flex;align-items:center;gap:2px;height:6px;width:120px;margin-left:6px}'
-    + '.spine__seg{height:6px;border-radius:2px;min-width:6px}'
+    + '.wswrap a:hover{color:var(--accent-strong);border-bottom-color:var(--accent)}'
+    + '.spine{display:inline-flex;align-items:center;gap:3px;height:8px;width:132px;margin-left:8px}'
+    + '.spine__seg{height:8px;border-radius:3px;min-width:7px;transition:opacity .12s ease}'
+    + '.spine:hover .spine__seg{opacity:.75}'
     + '.spine__seg--running{background:var(--run)}.spine__seg--done{background:var(--done)}'
     + '.spine__seg--error{background:var(--bad)}.spine__seg--decision{background:var(--warn)}'
     + '.spine__seg--idle{background:var(--idle)}'
     + '.top__right{margin-left:auto;display:flex;align-items:center;gap:8px}'
-    + '.btn{height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--rule-strong);'
+    + '.btn{height:34px;padding:0 12px;border-radius:8px;border:1px solid var(--rule-strong);'
     + 'background:#fff;color:var(--ink);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}'
     + '.btn:hover{background:var(--tray)}'
-    + '.btn--primary{background:var(--ink);border-color:var(--ink);color:#fff}'
+    + '.btn--primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn--primary:hover{background:var(--accent-strong);border-color:var(--accent-strong)}'
     + '.btn--primary:hover{background:#2c2c2e}'
     + '.quiet{font-size:13px;color:var(--muted);text-decoration:none;padding:6px 8px;border-radius:8px}'
-    + '.quiet:hover{background:#eceef2;color:var(--ink)}'
+    + '.quiet:hover{background:#eef1fb;color:var(--accent-strong)}'
     /* 白 sheet：flush L 形，仅一条 1px 上规则线；无阴影 */
     + '.sheet{background:var(--sheet);border-top:1px solid var(--rule);min-height:calc(100vh - 48px)}'
     + '.wrap{max-width:1200px;margin:0 auto;padding:24px}'
     + '.head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}'
-    + 'h1{font-size:24px;line-height:1.25;font-weight:600;letter-spacing:-.2px;margin:0;color:var(--ink)}'
+    + 'h1{font-size:26px;line-height:1.2;font-weight:650;letter-spacing:-.3px;margin:0;color:var(--ink)}'
     + '.meta{margin:0;font-size:14px;color:var(--muted)}'
     + '.head__right{margin-left:auto;display:flex;gap:8px;align-items:center}'
     /* 下划线 tabs：整宽 1px 规则线，指示条 2px 与标签同宽 */
@@ -164,11 +180,17 @@ export function renderShell({ ws, spaces = [], qs = '', demo = false, counts = {
     + /* 段：44px 间距、18/500 标题 + 右侧安静动作 */
     '.sec{margin:44px 0 0;scroll-margin-top:64px}'
     + '.sec__head{display:flex;align-items:baseline;gap:12px;margin:0 0 4px}'
-    + 'h2{font-size:18px;font-weight:550;line-height:1.4;margin:0;color:var(--ink)}'
+    + 'h2{display:flex;align-items:center;gap:8px;font-size:19px;font-weight:600;line-height:1.4;margin:0;color:var(--ink)}h2 svg{flex:0 0 auto;color:var(--ink);opacity:.85}'
     + '.sec__link{margin-left:auto;font-size:13px;color:var(--muted);text-decoration:none;white-space:nowrap}'
-    + '.sec__link:hover{color:var(--ink);text-decoration:underline}'
+    + '.sec__link:hover{color:var(--accent-strong);text-decoration:underline}'
     + '.sec__lead{margin:0 0 14px;font-size:14px;color:var(--muted)}'
     + '.sec>iframe{display:block;width:100%;height:0;border:0;background:transparent}'
+    /* 段之间一条发丝线，长页面才有节奏 */
+    + '.sec+.sec{border-top:1px solid var(--rule);margin-top:36px;padding-top:32px}'
+    + '::selection{background:#d3e2ff;color:var(--ink)}'
+    + 'a:focus-visible,button:focus-visible,.tabs a:focus-visible{outline:2px solid var(--ink);'
+    + 'outline-offset:2px;border-radius:6px}'
+    + 'html{scroll-behavior:smooth}'
     + '@media (max-width:900px){.wrap{padding:16px}h1{font-size:20px}'
     + '.brand__t,.wswrap .path,.wswrap>span:first-of-type{display:none}'
     + '.wswrap b{max-width:12ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
@@ -196,7 +218,7 @@ export function renderShell({ ws, spaces = [], qs = '', demo = false, counts = {
     /* sheet */
     + '<main class="sheet"><div class="wrap">'
     + '<div class="head"><h1>工作台</h1>'
-    + '<p class="meta">' + wsName + ' · 四段一屏' + (demo ? ' · 演示数据' : '') + '</p>'
+    + '<p class="meta">' + esc2(metaLine) + '</p>'
     + '<div class="head__right"><a class="quiet" href="/legacy' + esc2(wsq) + '">改造前版本</a></div></div>'
     + '<nav class="tabs">' + NAV.map(([id, label], i) => '<a href="#' + id + '" data-tab="' + id + '"'
       + (i === 0 ? ' class="is-on"' : '') + '>' + esc2(label) + '</a>').join('') + '</nav>'
@@ -204,7 +226,7 @@ export function renderShell({ ws, spaces = [], qs = '', demo = false, counts = {
       const src = embed(id === 'sec-cockpit' ? '/cockpit' : id === 'sec-stage' ? '/stage' : id === 'sec-team' ? '/team' : '/deps');
       const link = standalone(id === 'sec-cockpit' ? '/cockpit' : id === 'sec-stage' ? '/stage' : id === 'sec-team' ? '/team' : '/deps');
       return '<section class="sec" id="' + id + '">'
-        + '<div class="sec__head"><h2>' + esc2(label) + '</h2>'
+        + '<div class="sec__head"><h2>' + (ICONS[id] || '') + esc2(label) + '</h2>'
         + '<a class="sec__link" href="' + link + '">独立打开 ↗</a></div>'
         + '<p class="sec__lead">' + esc2(lead) + '</p>'
         + '<iframe data-auto src="' + src + '" title="' + esc2(label) + '" loading="' + (i === 0 ? 'eager' : 'lazy') + '"></iframe>'

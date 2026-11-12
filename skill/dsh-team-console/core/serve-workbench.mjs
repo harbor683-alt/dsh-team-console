@@ -440,6 +440,7 @@ const server = http.createServer(async (req, res) => {
         spaces: listWorkspaces(),
         qs: wsQS(url, ws),
         demo: url.searchParams.has('demo'),
+        taskCount: loadTasks(ws.id).length,
         counts: (() => {
           // 与驾驶舱"队伍在岗"同源：按团队成员状态计数，保证两处数字一致
           const c = { idle: 0, running: 0, done: 0, error: 0, decision: 0, archived: 0 };
