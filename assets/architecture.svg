@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="760" viewBox="0 0 1040 760" role="img" aria-labelledby="arch-title arch-desc" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', Arial, sans-serif">
+  <title id="arch-title">DSH 团队控制台 V2.0 架构图</title>
+  <desc id="arch-desc">浏览器通过 HTTP 访问 serve-workbench.mjs 的路由与 API，服务读取视图模块、任务账本、.agent-teams 与项目书。</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7a8494"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1040" height="760" fill="#f5f6f7"/>
+
+  <text x="40" y="48" font-size="20" font-weight="600" fill="#1f2733">DSH 团队控制台 V2.0 · 架构</text>
+  <text x="40" y="72" font-size="12" fill="#7a8494">浏览器 · 零依赖 Node 服务 · 四类数据源｜颜色承担语义，不做装饰</text>
+
+  <!-- 浏览器 -->
+  <rect x="330" y="96" width="380" height="76" rx="6" fill="#ffffff" stroke="#b9c1cb" stroke-width="1.2"/>
+  <text x="520" y="122" text-anchor="middle" font-size="14" font-weight="600" fill="#1f2733">浏览器（本机）</text>
+  <text x="520" y="142" text-anchor="middle" font-size="12" fill="#7a8494">http://127.0.0.1:8787</text>
+  <text x="520" y="161" text-anchor="middle" font-size="12" fill="#3a4453">驾驶舱 · 看板 · 团队架构 · 依赖泳道</text>
+
+  <!-- HTTP 双向 -->
+  <line x1="506" y1="172" x2="506" y2="201" stroke="#7a8494" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <line x1="534" y1="201" x2="534" y2="172" stroke="#7a8494" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <text x="552" y="181" font-size="12" fill="#7a8494">HTTP 请求 / 响应</text>
+  <text x="552" y="197" font-size="12" fill="#7a8494">服务端每请求重渲染</text>
+
+  <!-- 服务 -->
+  <rect x="160" y="206" width="720" height="206" rx="6" fill="#ffffff" stroke="#b9c1cb" stroke-width="1.2"/>
+  <text x="182" y="234" font-size="16" font-weight="600" fill="#1f2733">serve-workbench.mjs</text>
+  <text x="182" y="255" font-size="12" fill="#7a8494">路由 / API · 只用 Node 内置模块 · 零 npm 依赖</text>
+  <line x1="160" y1="268" x2="880" y2="268" stroke="#d8dde3" stroke-width="1"/>
+
+  <circle cx="184" cy="290" r="4" fill="#4f6d8f"/>
+  <text x="198" y="295" font-size="13" fill="#3a4453">页面路由　GET /　/kanban　/team　/deps　/legacy　/spaces</text>
+
+  <circle cx="184" cy="322" r="4" fill="#5f8766"/>
+  <text x="198" y="327" font-size="13" fill="#3a4453">数据接口　GET /api/data　/api/projects　/styles/v2.css</text>
+
+  <circle cx="184" cy="354" r="4" fill="#b0883d"/>
+  <text x="198" y="359" font-size="13" fill="#3a4453">动作接口　POST /api/action　move / archive / unarchive / create / delete / link / contract</text>
+
+  <circle cx="184" cy="386" r="4" fill="#8a919c"/>
+  <text x="198" y="391" font-size="13" fill="#3a4453">健康与版本　GET /api/health　/api/version</text>
+
+  <!-- 总线 -->
+  <line x1="520" y1="412" x2="520" y2="440" stroke="#b9c1cb" stroke-width="1.5"/>
+  <line x1="40" y1="440" x2="1000" y2="440" stroke="#b9c1cb" stroke-width="1.5"/>
+  <line x1="152.5" y1="440" x2="152.5" y2="481" stroke="#b9c1cb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="397.5" y1="440" x2="397.5" y2="481" stroke="#b9c1cb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="642.5" y1="440" x2="642.5" y2="481" stroke="#b9c1cb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="887.5" y1="440" x2="887.5" y2="481" stroke="#b9c1cb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 渲染模块 -->
+  <rect x="40" y="486" width="225" height="160" rx="6" fill="#ffffff" stroke="#d8dde3" stroke-width="1.2"/>
+  <rect x="40" y="486" width="225" height="4" rx="2" fill="#4f6d8f"/>
+  <text x="60" y="516" font-size="14" font-weight="600" fill="#1f2733">渲染模块</text>
+  <text x="60" y="535" font-size="12" fill="#7a8494">views\*.mjs（纯函数）</text>
+  <text x="60" y="562" font-size="12" fill="#3a4453">cockpit.mjs　驾驶舱 6.2</text>
+  <text x="60" y="584" font-size="12" fill="#3a4453">kanban.mjs　三态看板 6.6</text>
+  <text x="60" y="606" font-size="12" fill="#3a4453">team-arch.mjs　团队架构 6.3</text>
+  <text x="60" y="628" font-size="12" fill="#3a4453">dep-swim.mjs　依赖泳道 6.4</text>
+
+  <!-- 任务账本 -->
+  <rect x="285" y="486" width="225" height="160" rx="6" fill="#ffffff" stroke="#d8dde3" stroke-width="1.2"/>
+  <rect x="285" y="486" width="225" height="4" rx="2" fill="#7f8fa3"/>
+  <text x="305" y="516" font-size="14" font-weight="600" fill="#1f2733">任务账本</text>
+  <text x="305" y="535" font-size="12" fill="#7a8494">ledger-v2.json</text>
+  <text x="305" y="562" font-size="12" fill="#3a4453">任务 / 状态 / 依赖 / 日志</text>
+  <text x="305" y="584" font-size="12" fill="#3a4453">WORKBENCH_LEDGER 可覆盖</text>
+  <text x="305" y="606" font-size="12" fill="#3a4453">写入只经 /api/action</text>
+  <text x="305" y="628" font-size="12" fill="#7a8494">自动备份 + 墓碑保护</text>
+
+  <!-- 团队运行态 -->
+  <rect x="530" y="486" width="225" height="160" rx="6" fill="#ffffff" stroke="#d8dde3" stroke-width="1.2"/>
+  <rect x="530" y="486" width="225" height="4" rx="2" fill="#5f8766"/>
+  <text x="550" y="516" font-size="14" font-weight="600" fill="#1f2733">团队运行态</text>
+  <text x="550" y="535" font-size="12" fill="#7a8494">.agent-teams\</text>
+  <text x="550" y="562" font-size="12" fill="#3a4453">团队 / 成员 / 任务</text>
+  <text x="550" y="584" font-size="12" fill="#3a4453">消息 / 请求队列</text>
+  <text x="550" y="606" font-size="12" fill="#7a8494">按工作区隔离</text>
+
+  <!-- 项目书 -->
+  <rect x="775" y="486" width="225" height="160" rx="6" fill="#ffffff" stroke="#d8dde3" stroke-width="1.2"/>
+  <rect x="775" y="486" width="225" height="4" rx="2" fill="#b0883d"/>
+  <text x="795" y="516" font-size="14" font-weight="600" fill="#1f2733">项目书</text>
+  <text x="795" y="535" font-size="12" fill="#7a8494">项目书\*.md</text>
+  <text x="795" y="562" font-size="12" fill="#3a4453">任务上下文</text>
+  <text x="795" y="584" font-size="12" fill="#3a4453">驾驶舱「项目数」来源</text>
+  <text x="795" y="606" font-size="12" fill="#7a8494">工作区内的 Markdown</text>
+
+  <!-- 图例 -->
+  <text x="40" y="692" font-size="12" font-weight="600" fill="#1f2733">六状态色</text>
+  <g font-size="12" fill="#3a4453">
+    <rect x="120" y="682" width="10" height="10" rx="2" fill="#8a919c"/>
+    <text x="136" y="692">空闲 #8a919c</text>
+    <rect x="255" y="682" width="10" height="10" rx="2" fill="#4f6d8f"/>
+    <text x="271" y="692">执行中 #4f6d8f</text>
+    <rect x="400" y="682" width="10" height="10" rx="2" fill="#5f8766"/>
+    <text x="416" y="692">已完成 #5f8766</text>
+    <rect x="545" y="682" width="10" height="10" rx="2" fill="#a14f42"/>
+    <text x="561" y="692">异常 #a14f42</text>
+    <rect x="680" y="682" width="10" height="10" rx="2" fill="#b0883d"/>
+    <text x="696" y="692">待决策 #b0883d</text>
+    <rect x="825" y="682" width="10" height="10" rx="2" fill="#7f8fa3"/>
+    <text x="841" y="692">归档 #7f8fa3</text>
+  </g>
+
+  <text x="40" y="724" font-size="12" fill="#7a8494">无渐变 · 无发光 · 小圆角 ≤ 6px · 正文 ≥ 12px · 数字等宽</text>
+</svg>

@@ -1,0 +1,18 @@
+# Dependencies and build output are never committed.
+node_modules/
+
+# Logs
+*.log
+
+# Release artifacts (screenshots stay in images/, skill zip goes to dist/)
+dist/
+
+# Scratch implementation files
+_*.mjs
+
+# Rollback backups of the running workbench
+v2-backup/
+
+# OS noise
+.DS_Store
+Thumbs.db
