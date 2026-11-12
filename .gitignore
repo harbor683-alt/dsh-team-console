@@ -13,6 +13,11 @@ _*.mjs
 # Rollback backups of the running workbench
 v2-backup/
 
+# Runtime task store (created on first start; never ship user data)
+**/core/data/
+data/
+*.bak
+
 # OS noise
 .DS_Store
 Thumbs.db

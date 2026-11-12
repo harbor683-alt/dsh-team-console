@@ -1,0 +1,551 @@
+/* ============================================================================
+   V2.0 全局视觉规范 — team-view/styles/v2.css
+   ----------------------------------------------------------------------------
+   依据：V2.0改造交接.md §1（范围第 1 条）
+         _plan.txt 6.10 视觉规范（259-262 行）、表 6-4 状态色语义（610-616 行）、
+         表 27 统一交互规范（601-608 行）
+   原则：颜色承担语义，不承担装饰。
+         1) 全站无渐变、无发光、无高饱和背景；
+         2) 六状态色同明度区间、低饱和（见 §状态色）；
+         3) 正文无衬线、字号 >= 12px；数字等宽（tabular-nums），保证表格指标区对齐；
+         4) 全站小圆角，圆角上限 6px（--radius-max），无大圆角卡片。
+   消费方：三态看板、总览驾驶舱、团队架构、依赖图泳道各视图模块。
+   契约文档：同目录 V2-CSS-CONTRACT.md（变量名与类名以本文件为准）。
+   ============================================================================ */
+
+:root {
+  /* ---------------------------------------------------------------- 状态色
+     六状态色：同明度区间（主色均为中明度）、低饱和。
+     每个状态提供 4 个变量：主色 main / 浅底 bg / 边框 bd / 深字 fg。
+     使用位置与注意事项见 V2-CSS-CONTRACT.md §1（对齐表 6-4）。 */
+  /* 空闲 = 中性浅灰：与背景保持足够对比但不抢眼 */
+  --c-idle:       #8a919c;
+  --c-idle-bg:    #eef0f2;
+  --c-idle-bd:    #c4cad2;
+  --c-idle-fg:    #4c525a;
+
+  /* 执行中 = 沉静蓝（明度压低，同一屏占比可能较高） */
+  --c-running:    #4f6d8f;
+  --c-running-bg: #e4ebf3;
+  --c-running-bd: #9fb3c9;
+  --c-running-fg: #2f4763;
+
+  /* 已完成 = 低饱和绿（禁用荧光绿） */
+  --c-done:       #5f8766;
+  --c-done-bg:    #e6efe8;
+  --c-done-bd:    #a5c2ab;
+  --c-done-fg:    #35553b;
+
+  /* 异常 = 砖红：仅用于真正需要处理的对象 */
+  --c-error:      #a14f42;
+  --c-error-bg:   #f4e7e4;
+  --c-error-bd:   #d0a29a;
+  --c-error-fg:   #6b2f26;
+
+  /* 待决策 = 琥珀：数量应受控，避免满屏提醒 */
+  --c-decision:    #b0883d;
+  --c-decision-bg: #f3ecdd;
+  --c-decision-bd: #d3bf8f;
+  --c-decision-fg: #6f5623;
+
+  /* 归档 = 浅灰蓝：明显弱化，不与活动对象竞争 */
+  --c-archived:    #7f8fa3;
+  --c-archived-bg: #e9edf2;
+  --c-archived-bd: #b6c0cd;
+  --c-archived-fg: #47536a;
+
+  /* ---------------------------------------------------------------- 中性色 */
+  --bg-page:    #f5f6f7;   /* 页面背景：低饱和，禁用高饱和背景 */
+  --bg-panel:   #ffffff;   /* 面板/卡片底 */
+  --bg-panel-2: #fafbfc;   /* 次级面板/栏位底 */
+  --bg-hover:   #eef1f4;   /* 悬停底色（悬停只变色，不改变布局） */
+  --tx-strong:  #1f2733;   /* 标题/强调文字 */
+  --tx-body:    #3a4453;   /* 正文 */
+  --tx-weak:    #7a8494;   /* 辅助/标签文字 */
+  --bd-line:    #d8dde3;   /* 常规描边 */
+  --bd-strong:  #b9c1cb;   /* 强调描边 */
+
+  /* ---------------------------------------------------------------- 字体
+     正文：无衬线；数字：tabular-nums 等宽字形（表格/指标区对齐）。 */
+  --font-sans: "Segoe UI", "PingFang SC", "Microsoft YaHei",
+               "Noto Sans CJK SC", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, "SF Mono", Menlo,
+               ui-monospace, monospace;
+
+  /* ---------------------------------------------------------------- 字号
+     正文下限 12px（--fs-12 即最小可用字号）。 */
+  --fs-12: 12px;   /* 标签/辅助信息/表格头（下限） */
+  --fs-13: 13px;   /* 正文基准 */
+  --fs-14: 14px;   /* 强调正文/卡片标题 */
+  --fs-16: 16px;   /* 指标值/子标题 */
+  --fs-18: 18px;   /* 大指标值 */
+  --fs-20: 20px;   /* 区块标题 */
+  --fs-24: 24px;   /* 页面标题 */
+  --fs-base: var(--fs-13);
+
+  /* ---------------------------------------------------------------- 圆角
+     全站小圆角；--radius-max = 6px 为硬上限，禁止任何更大圆角。 */
+  --radius-xs:  2px;   /* 标签/角标/节点 */
+  --radius-s:   4px;   /* 卡片/面板/弹层 */
+  --radius-m:   6px;   /* 大面板（上限） */
+  --radius-max: 6px;   /* 全站圆角上限，组件不得超越 */
+
+  /* ---------------------------------------------------------------- 间距 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+
+  /* ---------------------------------------------------------------- 动效
+     仅允许极短的颜色过渡（悬停反馈）；禁用渐变、发光、弹跳等装饰动效。 */
+  --t-fast: 120ms ease;
+}
+
+/* ============================================================================
+   视图根容器：每个 V2 视图模块的容器加 class="v2-root"。
+   盒模型统一、字体与基准字号在此归一。
+   ============================================================================ */
+.v2-root,
+.v2-root *,
+.v2-root *::before,
+.v2-root *::after {
+  box-sizing: border-box;
+}
+
+.v2-root {
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  color: var(--tx-body);
+  background: var(--bg-page);
+}
+
+/* 键盘可达焦点（表 27：全部可选中对象） */
+.v2-root :focus-visible {
+  outline: 2px solid var(--c-running);
+  outline-offset: 1px;
+}
+
+/* ============================================================================
+   状态修饰约定：.v2-st--<状态> 可组合到任意状态感知组件上
+   （.v2-tag / .v2-dot / .v2-stripe / .v2-progress / .v2-node / .v2-card）。
+   组件内部一律消费局部变量 --st-main / --st-bg / --st-bd / --st-fg。
+   缺省（未标状态）＝空闲灰；缺省规则用 :where() 置零特异性，
+   保证 .v2-st--* 状态类无论出现顺序如何都一定覆盖缺省值。
+   ============================================================================ */
+:where(.v2-tag, .v2-dot, .v2-stripe, .v2-progress, .v2-node) {
+  --st-main: var(--c-idle);
+  --st-bg:   var(--c-idle-bg);
+  --st-bd:   var(--c-idle-bd);
+  --st-fg:   var(--c-idle-fg);
+}
+
+.v2-st--idle     { --st-main: var(--c-idle);     --st-bg: var(--c-idle-bg);     --st-bd: var(--c-idle-bd);     --st-fg: var(--c-idle-fg); }
+.v2-st--running  { --st-main: var(--c-running);  --st-bg: var(--c-running-bg);  --st-bd: var(--c-running-bd);  --st-fg: var(--c-running-fg); }
+.v2-st--done     { --st-main: var(--c-done);     --st-bg: var(--c-done-bg);     --st-bd: var(--c-done-bd);     --st-fg: var(--c-done-fg); }
+.v2-st--error    { --st-main: var(--c-error);    --st-bg: var(--c-error-bg);    --st-bd: var(--c-error-bd);    --st-fg: var(--c-error-fg); }
+.v2-st--decision { --st-main: var(--c-decision); --st-bg: var(--c-decision-bg); --st-bd: var(--c-decision-bd); --st-fg: var(--c-decision-fg); }
+.v2-st--archived { --st-main: var(--c-archived); --st-bg: var(--c-archived-bg); --st-bd: var(--c-archived-bd); --st-fg: var(--c-archived-fg); }
+
+/* ============================================================================
+   通用组件类
+   ============================================================================ */
+
+/* ---- 卡片 .v2-card ------------------------------------------------ */
+.v2-card {
+  position: relative;                 /* 供 .v2-corner-dot / .v2-popover 定位 */
+  background: var(--bg-panel);
+  border: 1px solid var(--bd-line);
+  border-radius: var(--radius-s);     /* 小圆角，禁止大圆角 */
+  padding: var(--sp-3);
+  min-width: 0;
+}
+.v2-card--flat   { background: var(--bg-panel-2); }
+.v2-card--active { border-color: var(--st-bd, var(--c-running-bd)); }
+/* 归档/历史卡片弱化 */
+.v2-dim          { opacity: .62; }
+
+/* ---- 状态点 .v2-dot ---------------------------------------------- */
+.v2-dot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--st-main);
+}
+.v2-dot--sm { width: 6px;  height: 6px; }
+.v2-dot--lg { width: 10px; height: 10px; }
+
+/* ---- 色条 .v2-stripe ---------------------------------------------- */
+.v2-stripe {
+  height: 4px;
+  border-radius: var(--radius-xs);
+  background: var(--st-main);
+}
+.v2-stripe--sm { height: 2px; }
+.v2-stripe--lg { height: 6px; }
+
+/* ---- 标签 .v2-tag -------------------------------------------------- */
+.v2-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  font-size: var(--fs-12);
+  line-height: 18px;
+  color: var(--st-fg);
+  background: var(--st-bg);
+  border: 1px solid var(--st-bd);
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+}
+/* 实心标签：主色底、白字（归档等浅色状态慎用，优先空心标签） */
+.v2-tag--solid {
+  color: #ffffff;
+  background: var(--st-main);
+  border-color: var(--st-main);
+}
+
+/* ---- 进度条 .v2-progress ------------------------------------------- */
+.v2-progress {
+  height: 6px;
+  background: var(--bg-hover);
+  border-radius: 3px;
+  overflow: hidden;
+  min-width: 40px;
+}
+.v2-progress--sm { height: 4px; border-radius: 2px; }
+.v2-progress__fill {
+  height: 100%;
+  width: var(--p, 0%);       /* 进度值经内联 --p 传入，如 style="--p:60%" */
+  background: var(--st-main);
+  border-radius: inherit;
+  transition: width var(--t-fast);
+}
+
+/* ---- 状态条 .v2-statusbar（一行状态单元，如总览页角色状态横条） ----- */
+.v2-statusbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.v2-statusbar__cell {
+  flex: none;
+  min-width: 26px;
+  height: 14px;
+  padding: 0 4px;
+  border: 1px solid var(--st-bd);
+  border-radius: var(--radius-xs);
+  background: var(--st-main);
+}
+.v2-statusbar__label {
+  font-size: var(--fs-12);
+  color: var(--tx-weak);
+}
+
+/* ---- 数字 .v2-num（等宽字形，表格/指标区对齐） ---------------------- */
+.v2-num {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+/* 纯等宽字体数字（需与代码/ID 视觉一致时） */
+.v2-num--mono {
+  font-family: var(--font-mono);
+  font-size: .92em;
+}
+
+/* ---- 指标块 .v2-metric（驾驶舱指标区） ------------------------------ */
+.v2-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.v2-metric__label {
+  font-size: var(--fs-12);
+  color: var(--tx-weak);
+}
+.v2-metric__value {
+  font-size: var(--fs-18);
+  font-weight: 600;
+  color: var(--tx-strong);
+  font-variant-numeric: tabular-nums lining-nums;   /* 指标数值一律等宽 */
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v2-metric__unit {
+  font-size: var(--fs-12);
+  color: var(--tx-weak);
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+/* ---- 表格 .v2-table ------------------------------------------------- */
+.v2-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-13);
+}
+.v2-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--fs-12);
+  color: var(--tx-weak);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--bd-strong);
+  white-space: nowrap;
+}
+.v2-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--bd-line);
+  color: var(--tx-body);
+  vertical-align: top;
+}
+.v2-table th.num,
+.v2-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;   /* 指标列等宽右对齐 */
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v2-table tbody tr:hover td { background: var(--bg-hover); }
+/* 含重试等异常行加粗标注（消耗模块口径） */
+.v2-table td.strong { font-weight: 700; }
+
+/* ---- 悬停展开 .v2-popover（表 27：悬停补充信息，不改变布局） ---------- */
+.v2-hoverable { position: relative; }
+.v2-popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  display: none;                       /* 覆盖式弹出，不挤动布局 */
+  min-width: 200px;
+  max-width: 320px;
+  padding: var(--sp-3);
+  background: var(--bg-panel);
+  border: 1px solid var(--bd-strong);
+  border-radius: var(--radius-s);
+  font-size: var(--fs-12);
+  color: var(--tx-body);
+  text-align: left;
+  line-height: 1.5;
+}
+.v2-hoverable:hover .v2-popover,
+.v2-hoverable:focus-within .v2-popover { display: block; }
+.v2-popover__title {
+  font-weight: 600;
+  font-size: var(--fs-13);
+  color: var(--tx-strong);
+  margin-bottom: 4px;
+}
+.v2-popover__meta {
+  color: var(--tx-weak);
+  margin-top: 4px;
+}
+
+/* ---- 角标：右上异常小圆点 .v2-corner-dot（团队视图角色卡） ---------- */
+.v2-corner-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c-error);
+  border: 1px solid var(--bg-panel);
+}
+
+/* ---- 数字角标 .v2-badge（依赖图回退次数等） -------------------------- */
+.v2-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: var(--fs-12);
+  line-height: 18px;
+  text-align: center;
+  color: #ffffff;
+  background: var(--c-error);
+  border-radius: var(--radius-xs);    /* 角标也遵守小圆角 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 依赖图方形节点 .v2-node ---------------------------------------- */
+.v2-node {
+  position: relative;
+  display: inline-block;
+  min-width: 96px;
+  max-width: 200px;
+  padding: 7px var(--sp-3) var(--sp-2);
+  background: var(--bg-panel);
+  border: 1px solid var(--st-bd);
+  border-radius: var(--radius-xs);    /* 方形节点，仅 2px 小圆角 */
+}
+.v2-node__title {
+  display: block;
+  font-size: var(--fs-12);
+  font-weight: 600;
+  color: var(--tx-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v2-node__bar {                        /* 节点顶部状态色条 */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--st-main);
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+}
+
+/* ---- 依赖图连线（SVG stroke 类；粗细=数据量由 JS 设 stroke-width） ---- */
+.v2-line--dep   { stroke: var(--tx-weak);     }  /* 依赖：方向 = 连线 */
+.v2-line--cross { stroke: var(--c-running);  stroke-dasharray: 5 4; } /* 跨角色调用：虚线 */
+.v2-line--fail  { stroke: var(--c-error);    stroke-dasharray: 4 3; } /* 失败/打回：红色虚线 */
+
+/* ---- 返工区间斜纹填充（泳道时间线；用 SVG 纹理替代渐变函数） --------- */
+.v2-rework {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M-2,10 L10,-2 M0,10 L10,0' stroke='%23a14f42' stroke-width='1.4' opacity='0.5'/%3E%3C/svg%3E");
+  background-size: 8px 8px;
+}
+
+/* ---- 采纳军师建议标记（菱形，悬停显示摘要由 JS 模块配合 .v2-popover） */
+.v2-mark {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  background: var(--c-decision);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+/* ---- 按钮 .v2-btn（扁平、小圆角；无渐变无发光） ---------------------- */
+.v2-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: var(--fs-13);
+  line-height: 20px;
+  font-family: inherit;
+  color: var(--tx-body);
+  background: var(--bg-panel);
+  border: 1px solid var(--bd-strong);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+.v2-btn:hover { background: var(--bg-hover); border-color: var(--tx-weak); }
+.v2-btn--primary {
+  color: #ffffff;
+  background: var(--c-running);
+  border-color: var(--c-running);
+}
+.v2-btn--primary:hover { background: var(--c-running-fg); border-color: var(--c-running-fg); }
+.v2-btn--danger {
+  color: #ffffff;
+  background: var(--c-error);
+  border-color: var(--c-error);
+}
+.v2-btn--danger:hover { background: var(--c-error-fg); border-color: var(--c-error-fg); }
+.v2-btn--ghost { background: transparent; border-color: transparent; }
+.v2-btn--ghost:hover { background: var(--bg-hover); }
+.v2-btn[disabled] { opacity: .55; cursor: not-allowed; }
+
+/* ---- 选中态（表 27：单击选中展示详情；outline 不挤动布局） ----------- */
+.v2-selected {
+  outline: 2px solid var(--c-running);
+  outline-offset: -1px;
+}
+
+/* ---- 拖拽（表 27：拖拽改变状态或位置） -------------------------------- */
+.v2-draggable { cursor: grab; }
+.v2-draggable:active { cursor: grabbing; }
+
+/* ---- 任务卡 .v2-task（三行：名称+负责人 / 进度+剩余 / 标签）
+        布局类，视觉外观由 .v2-card 提供，二者组合使用。 ---------------- */
+.v2-task { display: flex; flex-direction: column; gap: var(--sp-2); }
+.v2-task__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.v2-task__name {
+  font-size: var(--fs-13);
+  font-weight: 600;
+  color: var(--tx-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v2-task__owner { font-size: var(--fs-12); color: var(--tx-weak); flex: none; }
+.v2-task__mid { display: flex; align-items: center; gap: var(--sp-2); }
+.v2-task__mid .v2-progress { flex: 1; }
+.v2-task__eta { font-size: var(--fs-12); color: var(--tx-weak); flex: none; }
+.v2-task__tags { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* ---- 看板三栏 .v2-board ---------------------------------------------- */
+.v2-board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 1fr);
+  gap: var(--sp-3);
+  align-items: start;
+}
+.v2-board__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  min-height: 120px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--bd-line);
+  border-radius: var(--radius-s);
+}
+.v2-board__title {
+  font-size: var(--fs-12);
+  font-weight: 600;
+  color: var(--tx-weak);
+  letter-spacing: .04em;
+}
+/* 拖拽悬停投放提示（拖拽期间由 JS 添加） */
+.v2-board__col--drop {
+  border-style: dashed;
+  border-color: var(--c-decision-bd);
+  background: var(--c-decision-bg);
+}
+
+/* ---- 区块与列表 ------------------------------------------------------- */
+.v2-section { display: flex; flex-direction: column; gap: var(--sp-2); }
+.v2-section__title {
+  font-size: var(--fs-12);
+  font-weight: 600;
+  color: var(--tx-weak);
+  letter-spacing: .04em;
+}
+.v2-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--bd-line);
+}
+.v2-item:last-child { border-bottom: none; }
+.v2-item__main { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v2-item__action { flex: none; }
+
+/* ---- 图例 .v2-legend --------------------------------------------------- */
+.v2-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-12);
+  color: var(--tx-weak);
+}

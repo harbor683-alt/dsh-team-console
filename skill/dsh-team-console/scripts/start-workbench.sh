@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 # dsh-team-console launcher (macOS / Linux)
 # Usage: sh start-workbench.sh [workspace] [port]
+# The skill ships its own core/; no external team-view folder is required.
 set -eu
 
 PORT="${2:-8787}"
@@ -20,29 +21,31 @@ if [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
 fi
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-WS="${1:-}"
+SKILL_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+WS="${1:-$PWD}"
 
-if [ -n "${DSH_TEAM_CONSOLE_HOME:-}" ]; then
+CONSOLE_HOME="$SKILL_DIR/core"
+if [ ! -f "$CONSOLE_HOME/serve-workbench.mjs" ] && [ -n "${DSH_TEAM_CONSOLE_HOME:-}" ] && [ -f "$DSH_TEAM_CONSOLE_HOME/serve-workbench.mjs" ]; then
   CONSOLE_HOME=$DSH_TEAM_CONSOLE_HOME
-elif [ -n "$WS" ] && [ -f "$WS/team-view/serve-workbench.mjs" ]; then
+fi
+if [ ! -f "$CONSOLE_HOME/serve-workbench.mjs" ] && [ -f "$WS/team-view/serve-workbench.mjs" ]; then
   CONSOLE_HOME="$WS/team-view"
-else
-  CONSOLE_HOME=$(CDPATH= cd -- "$SCRIPT_DIR/../../../.." && pwd)
 fi
-
 if [ ! -f "$CONSOLE_HOME/serve-workbench.mjs" ]; then
-  echo "[error] serve-workbench.mjs not found under: $CONSOLE_HOME" >&2
-  echo "        Set DSH_TEAM_CONSOLE_HOME to the folder containing it." >&2
+  echo "[error] serve-workbench.mjs not found. Reinstall the skill package." >&2
   exit 1
-fi
-
-if [ -z "$WS" ]; then
-  WS=$(CDPATH= cd -- "$CONSOLE_HOME/.." && pwd)
 fi
 
 if [ ! -d "$WS" ]; then
   echo "[error] workspace not found: $WS" >&2
   exit 1
+fi
+
+if [ -z "${WORKBENCH_BOARD:-}" ]; then
+  DSH_DIR="${DSH_HOME:-$HOME/.dsh}"
+  mkdir -p "$DSH_DIR/team-console"
+  WORKBENCH_BOARD="$DSH_DIR/team-console/board.json"
+  export WORKBENCH_BOARD
 fi
 
 if ! command -v node >/dev/null 2>&1; then
@@ -58,6 +61,7 @@ fi
 
 echo "Workspace : $WS"
 echo "Console   : $CONSOLE_HOME/serve-workbench.mjs"
+echo "Board     : $WORKBENCH_BOARD"
 echo "URL       : http://127.0.0.1:$PORT/"
 
 exec node "$CONSOLE_HOME/serve-workbench.mjs" "$WS" --port="$PORT"

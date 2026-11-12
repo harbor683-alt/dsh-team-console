@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1040" height="760" viewBox="0 0 1040 760" role="img" aria-labelledby="arch-title arch-desc" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', Arial, sans-serif">
   <title id="arch-title">DSH 团队控制台 V2.0 架构图</title>
-  <desc id="arch-desc">浏览器通过 HTTP 访问 serve-workbench.mjs 的路由与 API，服务读取视图模块、任务账本、.agent-teams 与项目书。</desc>
+  <desc id="arch-desc">浏览器通过 HTTP 访问 core/serve-workbench.mjs 的路由与 API，服务读取视图模块、任务存储 board.json、.agent-teams 与项目书。</desc>
 
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -27,12 +27,12 @@
 
   <!-- 服务 -->
   <rect x="160" y="206" width="720" height="206" rx="6" fill="#ffffff" stroke="#b9c1cb" stroke-width="1.2"/>
-  <text x="182" y="234" font-size="16" font-weight="600" fill="#1f2733">serve-workbench.mjs</text>
+  <text x="182" y="234" font-size="16" font-weight="600" fill="#1f2733">core/serve-workbench.mjs</text>
   <text x="182" y="255" font-size="12" fill="#7a8494">路由 / API · 只用 Node 内置模块 · 零 npm 依赖</text>
   <line x1="160" y1="268" x2="880" y2="268" stroke="#d8dde3" stroke-width="1"/>
 
   <circle cx="184" cy="290" r="4" fill="#4f6d8f"/>
-  <text x="198" y="295" font-size="13" fill="#3a4453">页面路由　GET /　/kanban　/team　/deps　/legacy　/spaces</text>
+  <text x="198" y="295" font-size="13" fill="#3a4453">页面路由　GET /　/kanban　/team　/deps　/legacy　/classic　/spaces</text>
 
   <circle cx="184" cy="322" r="4" fill="#5f8766"/>
   <text x="198" y="327" font-size="13" fill="#3a4453">数据接口　GET /api/data　/api/projects　/styles/v2.css</text>
@@ -41,7 +41,7 @@
   <text x="198" y="359" font-size="13" fill="#3a4453">动作接口　POST /api/action　move / archive / unarchive / create / delete / link / contract</text>
 
   <circle cx="184" cy="386" r="4" fill="#8a919c"/>
-  <text x="198" y="391" font-size="13" fill="#3a4453">健康与版本　GET /api/health　/api/version</text>
+  <text x="198" y="391" font-size="13" fill="#3a4453">数据与版本　GET /api/health　/api/version　POST /api/resync</text>
 
   <!-- 总线 -->
   <line x1="520" y1="412" x2="520" y2="440" stroke="#b9c1cb" stroke-width="1.5"/>
@@ -64,12 +64,12 @@
   <!-- 任务账本 -->
   <rect x="285" y="486" width="225" height="160" rx="6" fill="#ffffff" stroke="#d8dde3" stroke-width="1.2"/>
   <rect x="285" y="486" width="225" height="4" rx="2" fill="#7f8fa3"/>
-  <text x="305" y="516" font-size="14" font-weight="600" fill="#1f2733">任务账本</text>
-  <text x="305" y="535" font-size="12" fill="#7a8494">ledger-v2.json</text>
+  <text x="305" y="516" font-size="14" font-weight="600" fill="#1f2733">任务存储</text>
+  <text x="305" y="535" font-size="12" fill="#7a8494">core\data\board.json</text>
   <text x="305" y="562" font-size="12" fill="#3a4453">任务 / 状态 / 依赖 / 日志</text>
-  <text x="305" y="584" font-size="12" fill="#3a4453">WORKBENCH_LEDGER 可覆盖</text>
+  <text x="305" y="584" font-size="12" fill="#3a4453">WORKBENCH_BOARD 可覆盖</text>
   <text x="305" y="606" font-size="12" fill="#3a4453">写入只经 /api/action</text>
-  <text x="305" y="628" font-size="12" fill="#7a8494">自动备份 + 墓碑保护</text>
+  <text x="305" y="628" font-size="12" fill="#7a8494">账本/团队仅首次导入</text>
 
   <!-- 团队运行态 -->
   <rect x="530" y="486" width="225" height="160" rx="6" fill="#ffffff" stroke="#d8dde3" stroke-width="1.2"/>
