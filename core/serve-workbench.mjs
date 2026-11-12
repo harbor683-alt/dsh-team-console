@@ -7,7 +7,7 @@ import { render, loadTasks, loadTeams } from './workbench.mjs';
 import { renderConsole } from './console.mjs';
 import { renderOrchestra } from './orchestra.mjs';
 import { renderStage, renderSpaces } from './stage.mjs';
-import { listWorkspaces, resolveWorkspace, DSH_HOME } from './workspaces.mjs';
+import { listWorkspaces, resolveWorkspace } from './workspaces.mjs';
 import { renderCockpit } from './views/cockpit.mjs';
 import { renderKanban } from './views/kanban.mjs';
 import { renderTeamArch } from './views/team-arch.mjs';
@@ -15,7 +15,7 @@ import { renderDepSwim } from './views/dep-swim.mjs';
 import * as store from './store.mjs';
 
 const SERVER_VERSION = 2; // 插件用它判断端口上跑的是不是新代码（旧进程会被替换）
-const WS = process.argv[2] && !process.argv[2].startsWith('--') ? path.resolve(process.argv[2]) : process.cwd();
+const WS = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'E:/作品/deepseek';
 const PORT = Number(process.argv.find((a) => a.startsWith('--port='))?.split('=')[1] || 8787);
 // v2.css 随服务端文件走（不随 WS 参数走，临时工作区也能取到全局样式）
 const V2_CSS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'styles', 'v2.css');
@@ -59,7 +59,7 @@ function readLinks() {
 }
 
 
-const SESS_ROOT = path.join(DSH_HOME, 'sessions');
+const SESS_ROOT = 'C:/Users/35438/.dsh/sessions';
 function readSessionMessages(id) {
   let dir = null;
   const names = String(id).startsWith('session-') ? [String(id)] : [String(id), 'session-' + id];
@@ -153,20 +153,20 @@ const esc2 = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&'
  * 自带样式（取 v2.css 同值中性色，无渐变/发光，圆角 ≤ 6px），可注入任何页面
  * ------------------------------------------------------------------------- */
 const V2_NAV_CSS = '<style>'
-  + '.v2-nav{position:sticky;top:0;z-index:50;background:#ffffff;border-bottom:1px solid #d8dde3;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:13px;line-height:1.5}'
+  + '.v2-nav{position:sticky;top:0;z-index:50;background:#ffffff;border-bottom:1px solid rgba(0,0,0,.10);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:13px;line-height:1.5}'
   + '.v2-nav__inner{max-width:1280px;margin:0 auto;padding:7px 16px;display:flex;align-items:center;gap:2px;flex-wrap:wrap}'
-  + '.v2-nav__brand{font-weight:700;color:#1f2733;margin-right:8px}'
-  + '.v2-nav__item{color:#3a4453;text-decoration:none;padding:4px 10px;border-radius:4px;border:1px solid transparent;white-space:nowrap}'
-  + '.v2-nav__item:hover{background:#eef1f4}'
-  + '.v2-nav__item.on{background:#1f2733;color:#ffffff}'
-  + '.v2-nav__sep{width:1px;height:16px;background:#d8dde3;margin:0 8px}'
+  + '.v2-nav__brand{font-weight:700;color:#0f1115;margin-right:8px}'
+  + '.v2-nav__item{color:#353638;text-decoration:none;padding:4px 10px;border-radius:4px;border:1px solid transparent;white-space:nowrap}'
+  + '.v2-nav__item:hover{background:#f1f3f5}'
+  + '.v2-nav__item.on{background:#0f1115;color:#ffffff}'
+  + '.v2-nav__sep{width:1px;height:16px;background:rgba(0,0,0,.10);margin:0 8px}'
   + '.v2-nav__gap{flex:1;min-width:12px}'
-  + '.v2-nav__ws{color:#7a8494;white-space:nowrap}'
-  + '.v2-nav__ws b{color:#1f2733;font-weight:600}'
-  + '.v2-nav__switch a{color:#4f6d8f;text-decoration:none;margin-left:6px;border-bottom:1px dashed #b9c1cb;white-space:nowrap}'
-  + '.v2-nav__switch a:hover{background:#eef1f4}'
-  + '.v2-nav__misc a,.v2-nav__misc button{color:#4f6d8f;text-decoration:none;padding:4px 8px;border:1px solid #d8dde3;border-radius:4px;background:#ffffff;margin-left:4px;font-size:13px;cursor:pointer;white-space:nowrap}'
-  + '.v2-nav__misc a:hover,.v2-nav__misc button:hover{background:#eef1f4}'
+  + '.v2-nav__ws{color:#61666b;white-space:nowrap}'
+  + '.v2-nav__ws b{color:#0f1115;font-weight:600}'
+  + '.v2-nav__switch a{color:#4176e6;text-decoration:none;margin-left:6px;border-bottom:1px dashed rgba(0,0,0,.16);white-space:nowrap}'
+  + '.v2-nav__switch a:hover{background:#f1f3f5}'
+  + '.v2-nav__misc a,.v2-nav__misc button{color:#4176e6;text-decoration:none;padding:4px 8px;border:1px solid rgba(0,0,0,.10);border-radius:4px;background:#ffffff;margin-left:4px;font-size:13px;cursor:pointer;white-space:nowrap}'
+  + '.v2-nav__misc a:hover,.v2-nav__misc button:hover{background:#f1f3f5}'
   + '.v2-nav__misc button{font-family:inherit}'
   + '</style>';
 
@@ -204,13 +204,13 @@ function v2CreateModalHtml() {
     + '<button type="button" class="v2-btn v2-btn--primary" id="v2-nm-ok">创建</button></div>'
     + '</div></div>'
     + '<style>'
-    + '.v2-nm{position:fixed;inset:0;z-index:80;background:rgba(15,23,42,.38);display:flex;align-items:center;justify-content:center}'
+    + '.v2-nm{position:fixed;inset:0;z-index:80;background:rgba(15,17,21,.38);display:flex;align-items:center;justify-content:center}'
     + '.v2-nm[hidden]{display:none}'
-    + '.v2-nm__panel{width:min(420px,90vw);background:#ffffff;border:1px solid #b9c1cb;border-radius:6px;padding:14px 16px;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:13px;box-sizing:border-box}'
-    + '.v2-nm__title{font-weight:700;color:#1f2733;margin-bottom:8px}'
-    + '.v2-nm__input{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #d8dde3;border-radius:4px;font:13px/1.5 inherit;outline:none;color:#3a4453}'
-    + '.v2-nm__input:focus{border-color:#b9c1cb}'
-    + '.v2-nm__err{color:#a14f42;font-size:12px;margin-top:6px}'
+    + '.v2-nm__panel{width:min(420px,90vw);background:#ffffff;border:1px solid rgba(0,0,0,.16);border-radius:6px;padding:14px 16px;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:13px;box-sizing:border-box}'
+    + '.v2-nm__title{font-weight:700;color:#0f1115;margin-bottom:8px}'
+    + '.v2-nm__input{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid rgba(0,0,0,.10);border-radius:4px;font:13px/1.5 inherit;outline:none;color:#353638}'
+    + '.v2-nm__input:focus{border-color:rgba(0,0,0,.16)}'
+    + '.v2-nm__err{color:#b91c1c;font-size:12px;margin-top:6px}'
     + '.v2-nm__actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}'
     + '</style>'
     + '<script>'
@@ -258,7 +258,7 @@ function v2Page({ title, body, ws, active, qs, spaces, showCreate }) {
     + '<meta name="viewport" content="width=device-width,initial-scale=1">'
     + '<title>' + esc2(title) + '</title>'
     + '<link rel="stylesheet" href="/styles/v2.css">'
-    + '<style>html,body{margin:0;padding:0;background:#f5f6f7}'
+    + '<style>html,body{margin:0;padding:0;background:#f9fafb}'
     + '.v2-page{max-width:1280px;margin:0 auto;padding:10px 16px 28px;font-family:var(--font-sans)}'
     + '</style></head><body>'
     + v2NavHtml({ ws, active, qs, spaces, showCreate })
@@ -366,7 +366,7 @@ function buildContractPrompt(ledger, t, extraPrompt, ws) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1');
   // 每个请求各自解析工作区：?ws=id/title/path → ?sid=会话反查 → 最近会话 → 默认
-  const ws = resolveWorkspace({ ws: url.searchParams.get('ws'), sid: url.searchParams.get('sid'), fallback: WS });
+  const ws = resolveWorkspace({ ws: url.searchParams.get('ws'), sid: url.searchParams.get('sid') });
   // 对账自愈已退役（t11）；healed 固定空值保持 /api/data、/api/version 对外 JSON 形状不变
   const healed = { healed: 0, titles: [] };
   // 每个请求先确保自有存储已就绪（首次自动从账本与团队文件导入；损坏自动重建）
@@ -659,7 +659,7 @@ const server = http.createServer(async (req, res) => {
     try {
       if (req.method === 'GET' && !url.pathname.startsWith('/api/')) {
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-        return res.end('<meta charset=utf-8><body style="font:14px/1.7 system-ui;padding:30px;color:#232a35"><h3 style="margin:0 0 8px">工作台这次没渲染出来</h3><pre style="white-space:pre-wrap;color:#b42318;background:#fff5f4;padding:10px;border-radius:8px">' + msg + '</pre><p><a href="/">重试</a> · <a href="/classic">用旧版工作台</a> · 数据没丢，只是这次渲染失败</p></body>');
+        return res.end('<meta charset=utf-8><body style="font:14px/1.7 system-ui;padding:30px;color:#0f1115"><h3 style="margin:0 0 8px">工作台这次没渲染出来</h3><pre style="white-space:pre-wrap;color:#b91c1c;background:#fee2e2;padding:10px;border-radius:8px">' + msg + '</pre><p><a href="/">重试</a> · <a href="/classic">用旧版工作台</a> · 数据没丢，只是这次渲染失败</p></body>');
       }
       res.writeHead(500, { 'content-type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: false, error: msg }));

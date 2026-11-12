@@ -18,52 +18,56 @@
      六状态色：同明度区间（主色均为中明度）、低饱和。
      每个状态提供 4 个变量：主色 main / 浅底 bg / 边框 bd / 深字 fg。
      使用位置与注意事项见 V2-CSS-CONTRACT.md §1（对齐表 6-4）。 */
-  /* 空闲 = 中性浅灰：与背景保持足够对比但不抢眼 */
-  --c-idle:       #8a919c;
-  --c-idle-bg:    #eef0f2;
-  --c-idle-bd:    #c4cad2;
-  --c-idle-fg:    #4c525a;
+  /* 取色基准：DeepSeek Harness 设计令牌 --dsw-*（dsh-client-ui-theme）。
+     状态色对齐 --dsw-alias-state-*，中性色对齐 --dsw-static-neutral-bluish-*，
+     因此本控制台与 DSH 主界面同色系、同明度关系。 */
 
-  /* 执行中 = 沉静蓝（明度压低，同一屏占比可能较高） */
-  --c-running:    #4f6d8f;
-  --c-running-bg: #e4ebf3;
-  --c-running-bd: #9fb3c9;
-  --c-running-fg: #2f4763;
+  /* 空闲 = 中性浅灰（--dsw-alias-state-idle-primary / bluish-500） */
+  --c-idle:       #979da6;
+  --c-idle-bg:    #f5f6f7;
+  --c-idle-bd:    #e1e5ee;
+  --c-idle-fg:    #61666b;
 
-  /* 已完成 = 低饱和绿（禁用荧光绿） */
-  --c-done:       #5f8766;
-  --c-done-bg:    #e6efe8;
-  --c-done-bd:    #a5c2ab;
-  --c-done-fg:    #35553b;
+  /* 执行中 = DSH 主蓝（--dsw-static-deepseek-500） */
+  --c-running:    #4176e6;
+  --c-running-bg: #edf3fe;
+  --c-running-bd: #d3e2ff;
+  --c-running-fg: #4868b2;
 
-  /* 异常 = 砖红：仅用于真正需要处理的对象 */
-  --c-error:      #a14f42;
-  --c-error-bg:   #f4e7e4;
-  --c-error-bd:   #d0a29a;
-  --c-error-fg:   #6b2f26;
+  /* 已完成 = DSH success 绿（--dsw-static-green-500 / green-100） */
+  --c-done:       #22c55e;
+  --c-done-bg:    #e6faed;
+  --c-done-bd:    #9ee8bb;
+  --c-done-fg:    #146c39;
 
-  /* 待决策 = 琥珀：数量应受控，避免满屏提醒 */
-  --c-decision:    #b0883d;
-  --c-decision-bg: #f3ecdd;
-  --c-decision-bd: #d3bf8f;
-  --c-decision-fg: #6f5623;
+  /* 异常 = DSH error 红（--dsw-static-red-500 / red-100） */
+  --c-error:      #ef4444;
+  --c-error-bg:   #fee2e2;
+  --c-error-bd:   #f5b8b8;
+  --c-error-fg:   #b91c1c;
 
-  /* 归档 = 浅灰蓝：明显弱化，不与活动对象竞争 */
-  --c-archived:    #7f8fa3;
-  --c-archived-bg: #e9edf2;
-  --c-archived-bd: #b6c0cd;
-  --c-archived-fg: #47536a;
+  /* 待决策 = DSH warn 琥珀（--dsw-static-amber-500 / amber-100） */
+  --c-decision:    #f59e0b;
+  --c-decision-bg: #fef5e7;
+  --c-decision-bd: #f6d79a;
+  --c-decision-fg: #92590a;
+
+  /* 归档 = DSH 弱化中性（--dsw-static-neutral-bluish-400 / 75） */
+  --c-archived:    #adb2b8;
+  --c-archived-bg: #f1f3f5;
+  --c-archived-bd: #e1e5ee;
+  --c-archived-fg: #61666b;
 
   /* ---------------------------------------------------------------- 中性色 */
-  --bg-page:    #f5f6f7;   /* 页面背景：低饱和，禁用高饱和背景 */
-  --bg-panel:   #ffffff;   /* 面板/卡片底 */
-  --bg-panel-2: #fafbfc;   /* 次级面板/栏位底 */
-  --bg-hover:   #eef1f4;   /* 悬停底色（悬停只变色，不改变布局） */
-  --tx-strong:  #1f2733;   /* 标题/强调文字 */
-  --tx-body:    #3a4453;   /* 正文 */
-  --tx-weak:    #7a8494;   /* 辅助/标签文字 */
-  --bd-line:    #d8dde3;   /* 常规描边 */
-  --bd-strong:  #b9c1cb;   /* 强调描边 */
+  --bg-page:    #f9fafb;   /* 页面底：--dsw-alias-bg-base（bluish-50） */
+  --bg-panel:   #ffffff;   /* 面板/卡片底：--dsw-static-neutral-bluish-00 */
+  --bg-panel-2: #f5f7fa;   /* 次级栏位底：bluish-55 */
+  --bg-hover:   #f1f3f5;   /* 悬停底：bluish-75 */
+  --tx-strong:  #0f1115;   /* 标题：--dsw-alias-label-primary（bluish-1000） */
+  --tx-body:    #353638;   /* 正文：bluish-800 */
+  --tx-weak:    #61666b;   /* 辅助文字：--dsw-alias-label-caption（bluish-700） */
+  --bd-line:    rgba(0, 0, 0, .10);  /* 常规描边：--dsw-alias-border-l2 */
+  --bd-strong:  rgba(0, 0, 0, .16);  /* 强调描边：--dsw-alias-border-l4 */
 
   /* ---------------------------------------------------------------- 字体
      正文：无衬线；数字：tabular-nums 等宽字形（表格/指标区对齐）。 */

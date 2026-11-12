@@ -246,7 +246,7 @@ html,body{margin:0;padding:0}
 .c-modal-title{font-size:var(--fs-14);font-weight:700;color:var(--tx-strong);margin-bottom:6px}
 .c-modal-body{font-size:var(--fs-13);color:var(--tx-body);line-height:1.6;margin-bottom:12px;word-break:break-all}
 .c-modal-actions{display:flex;justify-content:flex-end;gap:8px}
-.c-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:70;background:#1f2733;color:#ffffff;font-size:var(--fs-13);padding:7px 14px;border-radius:var(--radius-s);display:none;max-width:70vw}
+.c-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:70;background:var(--tx-strong);color:var(--bg-panel);font-size:var(--fs-13);padding:7px 14px;border-radius:var(--radius-s);display:none;max-width:70vw}
 .c-toast.show{display:block}
 </style></head>
 <body>
