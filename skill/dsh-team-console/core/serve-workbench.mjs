@@ -12,6 +12,7 @@ import { renderCockpit } from './views/cockpit.mjs';
 import { renderKanban } from './views/kanban.mjs';
 import { renderTeamArch } from './views/team-arch.mjs';
 import { renderDepSwim } from './views/dep-swim.mjs';
+import { renderShell, embedCss, stageEmbedCss } from './views/shell.mjs';
 import * as store from './store.mjs';
 
 const SERVER_VERSION = 2; // 插件用它判断端口上跑的是不是新代码（旧进程会被替换）
@@ -171,7 +172,7 @@ const V2_NAV_CSS = '<style>'
   + '</style>';
 
 function v2NavHtml({ ws, active, qs, spaces, showCreate }) {
-  const items = [['/', '驾驶舱'], ['/kanban', '任务看板'], ['/team', '团队架构'], ['/deps', '依赖泳道'], ['/legacy', '旧版工作台']];
+  const items = [['/', '工作台'], ['/cockpit', '驾驶舱'], ['/kanban', '任务看板'], ['/team', '团队架构'], ['/deps', '依赖泳道']];
   const links = items.map(([href, label]) =>
     '<a class="v2-nav__item' + (active === href ? ' on' : '') + '" href="' + href + qs + '">' + label + '</a>').join('');
   const others = (spaces || []).filter((s) => (s.id || s.path) !== (ws.id || ws.path));
@@ -253,17 +254,19 @@ function wsQS(url, ws) {
 }
 
 /* V2 页面壳：<head> 统一注入 v2.css，正文 = 顶部导航 + 视图片段 + 新建任务弹窗 */
-function v2Page({ title, body, ws, active, qs, spaces, showCreate }) {
+function v2Page({ title, body, ws, active, qs, spaces, showCreate, embed }) {
   return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
     + '<meta name="viewport" content="width=device-width,initial-scale=1">'
     + '<title>' + esc2(title) + '</title>'
     + '<link rel="stylesheet" href="/styles/v2.css">'
     + '<style>html,body{margin:0;padding:0;background:#f9fafb}'
     + '.v2-page{max-width:1280px;margin:0 auto;padding:10px 16px 28px;font-family:var(--font-sans)}'
-    + '</style></head><body>'
-    + v2NavHtml({ ws, active, qs, spaces, showCreate })
+    + '</style>'
+    + (embed ? embedCss() : '')
+    + '</head><body>'
+    + (embed ? '' : v2NavHtml({ ws, active, qs, spaces, showCreate }))
     + '<main class="v2-page">' + body + '</main>'
-    + (showCreate ? v2CreateModalHtml() : '')
+    + (embed ? '' : (showCreate ? v2CreateModalHtml() : ''))
     + '</body></html>';
 }
 
@@ -373,7 +376,9 @@ const server = http.createServer(async (req, res) => {
   store.readBoard(ws.path);
   try {
     if (req.method === 'GET' && (url.searchParams.get('view') === 'stage' || url.pathname === '/stage')) {
-      const html = renderStage(ws, { demo: url.searchParams.has('demo'), spaces: listWorkspaces() });
+      const embed = url.searchParams.get('embed') === '1';
+      let html = renderStage(ws, { demo: url.searchParams.has('demo'), spaces: listWorkspaces() });
+      if (embed) html = html.replace('</head>', stageEmbedCss() + '</head>');
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(html);
     }
@@ -399,24 +404,48 @@ const server = http.createServer(async (req, res) => {
       return res.end(css);
     }
     if (req.method === 'GET' && url.pathname === '/kanban') {
-      const html = v2Page({ title: '任务看板', body: renderKanban(v2Data(ws)), ws, active: '/kanban', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true });
+      const embed = url.searchParams.get('embed') === '1';
+      const html = v2Page({ title: '任务看板', body: renderKanban(v2Data(ws)), ws, active: '/kanban', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true, embed });
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(html);
     }
     if (req.method === 'GET' && url.pathname === '/team') {
-      const html = v2Page({ title: '团队架构', body: renderTeamArch(v2Data(ws)), ws, active: '/team', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true });
+      const embed = url.searchParams.get('embed') === '1';
+      const html = v2Page({ title: '团队架构', body: renderTeamArch(v2Data(ws)), ws, active: '/team', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true, embed });
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(html);
     }
     if (req.method === 'GET' && url.pathname === '/deps') {
-      const html = v2Page({ title: '依赖泳道', body: renderDepSwim(v2Data(ws)), ws, active: '/deps', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true });
+      const embed = url.searchParams.get('embed') === '1';
+      const html = v2Page({ title: '依赖泳道', body: renderDepSwim(v2Data(ws)), ws, active: '/deps', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true, embed });
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(html);
+    }
+    if (req.method === 'GET' && url.pathname === '/cockpit') {
+      // 总览驾驶舱（6.2）：作为独立视图保留；embed=1 时只出内容（供单页工作台内嵌）
+      const embed = url.searchParams.get('embed') === '1';
+      let html = renderCockpit(v2Data(ws));
+      if (embed) {
+        html = html.replace('</head>', embedCss() + '</head>');
+      } else {
+        html = html.replace('<body>', '<body>' + v2NavHtml({ ws, active: '/cockpit', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true }) + v2CreateModalHtml());
+      }
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(html);
+    }
+    if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
+      // 单页工作台壳：一个界面 = 驾驶舱 + 项目书/任务（V1 原布局） + 团队架构 + 依赖泳道
+      const html = renderShell({
+        ws,
+        spaces: listWorkspaces(),
+        qs: wsQS(url, ws),
+        demo: url.searchParams.has('demo'),
+      });
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(html);
     }
     if (req.method === 'GET' && url.pathname === '/legacy') {
-      // 兼容页：旧任务挂绳 + 团队树 + 项目书书架 + 新建任务弹窗（stage 自带），只注入 V2 顶部导航便于往返
-      const html = renderStage(ws, { demo: url.searchParams.has('demo'), spaces: listWorkspaces() })
-        .replace('<body>', '<body>' + v2NavHtml({ ws, active: '/legacy', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: false }));
+      const html = renderStage(ws, { demo: url.searchParams.has('demo'), spaces: listWorkspaces() });
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(html);
     }
@@ -427,13 +456,6 @@ const server = http.createServer(async (req, res) => {
         return { id: w.id, title: w.title, path: w.path, tasks: loadTasks(w.id), teams: loadTeams(w.path), projects };
       });
       const html = renderSpaces(stats, { current: ws.id });
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-      return res.end(html);
-    }
-    if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
-      // V2.0 默认落地总览驾驶舱（6.2），顶部注入 V2 导航（驾驶舱自带 /styles/v2.css 引用）
-      const html = renderCockpit(v2Data(ws))
-        .replace('<body>', '<body>' + v2NavHtml({ ws, active: '/', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true }) + v2CreateModalHtml());
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(html);
     }
