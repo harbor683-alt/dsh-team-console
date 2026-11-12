@@ -1,8 +1,8 @@
 // 工作台视图 v2：左竖栏(长期任务) · 中间晾衣绳(左→右) · 右竖栏(已完成) · 下方树状团队
 // 用法: node workbench.mjs [workspace] [--demo] [--out file]
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { defaultWorkspaceId } from './workspaces.mjs';
 import * as store from './store.mjs';
@@ -113,7 +113,7 @@ const DEMO_TEAMS = [
       { id: 'k3', subject: '复核刷机步骤', status: 'pending', assignee: 'reviewer-1' },
     ],
     messages: [
-      { from: 'assistant-1', to: 'captain', content: 't1 完成：当前目录 D:/your-workspace', ts: 1 },
+      { from: 'assistant-1', to: 'captain', content: 't1 完成：当前目录已就绪', ts: 1 },
       { from: 'captain', to: 'assistant-lead', content: '先把 system 分区 dd 出来再动 GSI', ts: 2 },
       { from: 'assistant-2', to: 'captain', content: 'GSI 镜像下好了，校验和匹配', ts: 3 },
     ],

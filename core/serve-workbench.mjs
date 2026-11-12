@@ -2,6 +2,7 @@ import http from 'node:http';
 import zlib from 'node:zlib';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { render, loadTasks, loadTeams } from './workbench.mjs';
 import { renderConsole } from './console.mjs';
@@ -16,7 +17,7 @@ import { renderShell, embedCss, stageEmbedCss } from './views/shell.mjs';
 import * as store from './store.mjs';
 
 const SERVER_VERSION = 2; // 插件用它判断端口上跑的是不是新代码（旧进程会被替换）
-const WS = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'E:/作品/deepseek';
+const WS = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : process.cwd();
 const PORT = Number(process.argv.find((a) => a.startsWith('--port='))?.split('=')[1] || 8787);
 // v2.css 随服务端文件走（不随 WS 参数走，临时工作区也能取到全局样式）
 const V2_CSS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'styles', 'v2.css');
@@ -60,7 +61,7 @@ function readLinks() {
 }
 
 
-const SESS_ROOT = 'C:/Users/35438/.dsh/sessions';
+const SESS_ROOT = path.join(process.env.DSH_HOME || path.join(os.homedir(), '.dsh'), 'sessions');
 function readSessionMessages(id) {
   let dir = null;
   const names = String(id).startsWith('session-') ? [String(id)] : [String(id), 'session-' + id];

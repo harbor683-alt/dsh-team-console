@@ -3,8 +3,8 @@
 // 账本与 <ws>/.agent-teams 仅为一次性导入源（读），可选镜像回写账本。
 // 契约：所有函数不因数据形状变化抛错；字段缺失一律给默认值。
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
