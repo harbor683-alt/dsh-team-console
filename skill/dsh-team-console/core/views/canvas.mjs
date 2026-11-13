@@ -13,6 +13,7 @@ const ICON = {
   book: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3.5h7.5L16 8v8.5H4z"/><path d="M11.5 3.5V8H16"/><path d="M7 11.5h5"/></svg>',
   team: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7.5" y="2.5" width="5" height="4" rx="1.2"/><rect x="2" y="13.5" width="5" height="4" rx="1.2"/><rect x="13" y="13.5" width="5" height="4" rx="1.2"/><path d="M10 6.5v3.5M4.5 13.5v-3.5h11v3.5"/></svg>',
   ask: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 4.5h13v9h-6.5L6 17v-3.5H3.5z"/><path d="M8 8.5h.01M12 8.5h.01"/></svg>',
+  board: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="4" height="13" rx="1.2"/><rect x="8" y="3.5" width="4" height="9" rx="1.2"/><rect x="13.5" y="3.5" width="4" height="11" rx="1.2"/></svg>',
   deps: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5h7M7 14.5h10"/><circle cx="12" cy="5.5" r="1.8"/><circle cx="5" cy="14.5" r="1.8"/></svg>',
   arrow: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5 8 10.5l4-4"/></svg>',
   external: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.5H12.5V6.5"/><path d="M12.5 3.5 7.5 8.5"/><path d="M12.5 9.5v3h-9v-9h3"/></svg>',
@@ -68,7 +69,11 @@ export function renderCanvas(opts) {
     + '<span class="cw__name">流氏工作台</span>'
     + '</a>'
     + '<span class="cw__dot" aria-hidden="true"></span>'
-    + '<span class="cw__ws"><b>' + wsName + '</b><span class="cw__path">' + wsPath + '</span></span>'
+    + '<label class="cw__ws" title="切换工作区">'
+    + '<span class="cw__ws-ic" aria-hidden="true"></span>'
+    + '<select class="cw__ws-sel" id="cw-ws" aria-label="切换工作区">'
+    + (o.spaces || []).map((s) => '<option value="' + esc(s.id) + '"' + (String(s.id) === String(o.wsId) ? ' selected' : '') + '>' + esc(s.title || s.id) + '</option>').join('')
+    + '</select></label>'
     + '<span class="cw__stat">' + members + ' 名成员 · ' + tasks + ' 项任务 · ' + projects + ' 份项目书</span>'
     + '<span class="cw__top-actions">'
     + '<a class="cw__link" href="' + esc('/spaces' + qs) + '">全部工作区</a>'
@@ -80,7 +85,7 @@ export function renderCanvas(opts) {
     + tile('驾驶舱', 'cockpit', url('/cockpit'), '/cockpit' + qs, '队伍在岗、指标与待办')
     + tile('项目书', 'book', url('/projects'), '/projects' + qs, '书架 + 全文阅读')
     + tile('拷问台', 'ask', url('/grill'), '/grill' + qs, '每轮只问前沿，答完生成项目卡')
-    + tile('团队架构', 'team', url('/team'), '/team' + qs, '完整团队视图与布局切换')
+    + tile('任务看板', 'board', url('/kanban'), '/kanban' + qs, '三态任务看板与新建任务')
     + '</nav>'
 
     + '<section class="cw__drawer" id="cw-drawer" data-open="false">'
@@ -107,6 +112,19 @@ export function renderCanvas(opts) {
     + '<div class="cw__sheet-body"><iframe id="cw-sheet-frame" title="详情"></iframe></div>'
     + '</div>'
     + '</div>'
+
+    + '<aside class="cw__chat" id="cw-chat" hidden aria-label="与成员对话">'
+    + '<header class="cw__chat-head">'
+    + '<div class="cw__chat-who"><span class="cw__chat-dot" aria-hidden="true"></span>'
+    + '<b id="cw-chat-name"></b><span class="cw__chat-team" id="cw-chat-team"></span></div>'
+    + '<button type="button" class="cw__chat-close" id="cw-chat-close" aria-label="关闭对话">'
+    + '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>'
+    + '</button></header>'
+    + '<div class="cw__chat-body" id="cw-chat-body"></div>'
+    + '<form class="cw__chat-form" id="cw-chat-form">'
+    + '<textarea id="cw-chat-input" rows="2" placeholder="和 TA 说点什么…（Ctrl+Enter 发送）" aria-label="消息内容"></textarea>'
+    + '<button type="submit" class="cw__chat-send" id="cw-chat-send">发送</button>'
+    + '</form></aside>'
 
     + '<script>' + SCRIPT + '</script>'
     + '</body></html>';
@@ -251,7 +269,7 @@ button{font:inherit;color:inherit}
 @media (max-width:900px){
   .cw__stat,.cw__path{display:none}
   .cw__ws{max-width:14ch}
-  .cw__ws b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cw__ws-sel{max-width:12ch}
 }
 @media (max-width:720px){
   .cw__top{height:48px;padding:0 12px;gap:8px}
@@ -266,6 +284,46 @@ button{font:inherit;color:inherit}
   .cw__tile,.cw__cta,.cw__drawer-arrow,.cw__drawer-body{transition:none!important}
   .cw__sheet{animation:none}
 }
+
+/* ---------- 工作区切换 ---------- */
+.cw__ws{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.cw__ws-ic{width:13px;height:13px;border-radius:4px;background:linear-gradient(135deg,#dfe6ff,#c7d2ff);flex:none}
+.cw__ws-sel{appearance:none;-webkit-appearance:none;border:0;background:transparent;font:inherit;
+  font-size:12.5px;font-weight:600;color:var(--cw-ink);padding:2px 4px;max-width:190px;cursor:pointer}
+.cw__ws-sel:focus-visible{outline:2px solid var(--cw-accent);outline-offset:2px;border-radius:6px}
+
+/* ---------- 成员对话面板 ---------- */
+.cw__chat{position:fixed;top:52px;right:0;bottom:46px;width:380px;max-width:100%;z-index:40;display:flex;flex-direction:column;
+  background:rgba(255,255,255,.97);backdrop-filter:blur(16px);border-left:1px solid var(--cw-line);
+  box-shadow:-18px 0 48px rgba(22,24,29,.10);animation:cwChatIn .18s ease-out}
+.cw__chat[hidden]{display:none}
+@keyframes cwChatIn{from{transform:translateX(16px);opacity:.4}to{transform:none;opacity:1}}
+.cw__chat-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-bottom:1px solid var(--cw-line)}
+.cw__chat-who{display:flex;align-items:center;gap:8px;min-width:0}
+.cw__chat-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex:none}
+.cw__chat-who b{font-size:14px;color:var(--cw-ink);white-space:nowrap}
+.cw__chat-team{font-size:11px;color:var(--cw-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cw__chat-close{width:28px;height:28px;border:0;border-radius:8px;background:transparent;color:var(--cw-muted);
+  cursor:pointer;display:grid;place-items:center;flex:none}
+.cw__chat-close:hover{background:#f1f3f5;color:var(--cw-ink)}
+.cw__chat-body{flex:1;min-height:0;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;
+  background:linear-gradient(180deg,#fbfcff,#fff)}
+.cw__msg{max-width:86%;display:flex;flex-direction:column;gap:3px;font-size:12.5px;line-height:1.6}
+.cw__msg--in{align-self:flex-start}
+.cw__msg--out{align-self:flex-end;align-items:flex-end}
+.cw__msg-who{font-size:10.5px;color:var(--cw-muted)}
+.cw__msg-bub{padding:8px 11px;border-radius:12px;background:#f2f4f8;color:#2c3038;white-space:pre-wrap;word-break:break-word}
+.cw__msg--out .cw__msg-bub{background:var(--cw-accent);color:#fff}
+.cw__chat-empty{margin:auto;color:var(--cw-muted);font-size:12px;text-align:center;line-height:1.9;max-width:240px}
+.cw__chat-form{display:flex;gap:8px;padding:10px 12px 12px;border-top:1px solid var(--cw-line);background:#fff}
+.cw__chat-form textarea{flex:1;min-height:56px;max-height:120px;resize:none;padding:9px 11px;border:1px solid var(--cw-line-2);
+  border-radius:10px;font:inherit;font-size:12.5px;line-height:1.5;color:var(--cw-ink);outline:none;background:#fff}
+.cw__chat-form textarea:focus{border-color:var(--cw-accent);box-shadow:0 0 0 3px rgba(77,107,254,.12)}
+.cw__chat-send{align-self:flex-end;height:34px;padding:0 14px;border:0;border-radius:9px;background:var(--cw-accent);
+  color:#fff;font-size:12.5px;cursor:pointer}
+.cw__chat-send:disabled{opacity:.5;cursor:default}
+@media (max-width:720px){.cw__chat{width:100%;top:48px}}
+@media (prefers-reduced-motion:reduce){.cw__chat{animation:none}}
 `;
 
 const SCRIPT = `
@@ -335,7 +393,7 @@ const SCRIPT = `
     modal.addEventListener('click', function (e) { if (e.target === modal) closeView(); });
   }
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { closeView(); closeTeamMenu(); }
+    if (e.key === 'Escape') { closeView(); closeTeamMenu(); closeChat(); }
   });
 
   /* ---------- 团队切换 ---------- */
@@ -390,6 +448,110 @@ const SCRIPT = `
       var savedItem = teamMenu.querySelector('.cw__team-item[data-team="' + savedTeam + '"]');
       if (savedItem) pickTeam(savedItem, false);
     }
+  }
+  /* ---------- 成员对话 ---------- */
+  var chat = document.getElementById('cw-chat');
+  var chatName = document.getElementById('cw-chat-name');
+  var chatTeamLabel = document.getElementById('cw-chat-team');
+  var chatBody = document.getElementById('cw-chat-body');
+  var chatForm = document.getElementById('cw-chat-form');
+  var chatInput = document.getElementById('cw-chat-input');
+  var chatClose = document.getElementById('cw-chat-close');
+  var chatCtx = { team: '', member: '' };
+
+  function escText(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmtTime(ts) {
+    if (!ts) return '';
+    var d = new Date(ts);
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    var now = new Date();
+    var same = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    return (same ? '' : (d.getMonth() + 1) + '/' + d.getDate() + ' ') + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function renderChat(messages) {
+    if (!chatBody) return;
+    if (!messages || !messages.length) {
+      chatBody.innerHTML = '<div class="cw__chat-empty">还没有对话记录。<br>在下面输入第一句话，就会写进 TA 的收件箱。</div>';
+      return;
+    }
+    chatBody.innerHTML = messages.map(function (m) {
+      var out = m.from === '真人';
+      return '<div class="cw__msg ' + (out ? 'cw__msg--out' : 'cw__msg--in') + '">'
+        + '<span class="cw__msg-who">' + escText(out ? '你' : (m.from || '')) + ' · ' + fmtTime(m.ts) + '</span>'
+        + '<span class="cw__msg-bub">' + escText(m.content) + '</span></div>';
+    }).join('');
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+  function loadChat() {
+    if (!chatBody) return;
+    chatBody.innerHTML = '<div class="cw__chat-empty">加载中…</div>';
+    fetch('/api/member-chat?team=' + encodeURIComponent(chatCtx.team) + '&member=' + encodeURIComponent(chatCtx.member))
+      .then(function (r) { return r.json(); })
+      .then(function (d) { renderChat(d && d.messages); })
+      .catch(function () { chatBody.innerHTML = '<div class="cw__chat-empty">读取失败，稍后再试。</div>'; });
+  }
+  function openChat(member, team, teamLabel) {
+    if (!chat || !member) return;
+    chatCtx.team = team || '';
+    chatCtx.member = member;
+    if (chatName) chatName.textContent = member;
+    if (chatTeamLabel) chatTeamLabel.textContent = teamLabel || team || '';
+    chat.hidden = false;
+    if (chatInput) {
+      chatInput.value = '';
+      setTimeout(function () { chatInput.focus(); }, 60);
+    }
+    loadChat();
+  }
+  function closeChat() { if (chat) chat.hidden = true; }
+  if (chatClose) chatClose.addEventListener('click', closeChat);
+  if (chatForm) {
+    chatForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var text = chatInput ? chatInput.value.trim() : '';
+      if (!text) return;
+      var btn = document.getElementById('cw-chat-send');
+      if (btn) btn.disabled = true;
+      fetch('/api/member-chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ team: chatCtx.team, member: chatCtx.member, content: text })
+      }).then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || !d.ok) throw new Error('send failed');
+          if (chatInput) chatInput.value = '';
+          loadChat();
+        })
+        .catch(function () {
+          if (chatBody) chatBody.insertAdjacentHTML('beforeend', '<div class="cw__chat-empty">发送失败：检查 8787 服务是否在跑。</div>');
+        })
+        .then(function () { var b = document.getElementById('cw-chat-send'); if (b) b.disabled = false; });
+    });
+  }
+  if (chatInput) {
+    chatInput.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (chatForm) chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+    });
+  }
+  window.addEventListener('message', function (e) {
+    var d = e.data || {};
+    if (d.type !== 'wb-member' || !d.member) return;
+    openChat(d.member, d.team || '', d.teamName || '');
+  });
+
+  /* ---------- 工作区切换 ---------- */
+  var wsSel = document.getElementById('cw-ws');
+  if (wsSel) {
+    wsSel.addEventListener('change', function () {
+      window.location.href = '/?ws=' + encodeURIComponent(wsSel.value);
+    });
   }
 })();
 `;

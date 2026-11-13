@@ -17,7 +17,7 @@ import { renderGrill } from './views/grill.mjs';
 import * as store from './store.mjs';
 import { loadTasks, loadTeams } from './team-data.mjs';
 
-const SERVER_VERSION = 5; // 插件用它判断端口上跑的是不是新代码（旧进程会被替换）
+const SERVER_VERSION = 8; // 插件用它判断端口上跑的是不是新代码（旧进程会被替换）
 const WS = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : process.cwd();
 const PORT = Number(process.argv.find((a) => a.startsWith('--port='))?.split('=')[1] || 8787);
 // v2.css 随服务端文件走（不随 WS 参数走，临时工作区也能取到全局样式）
@@ -188,6 +188,23 @@ const body = (req) => new Promise((resolve, reject) => {
   req.on('end', () => resolve(s ? JSON.parse(s) : {}));
   req.on('error', reject);
 });
+
+/* 个体对话：团队目录 + 收件箱文件（名字里的空格/斜杠换成下划线，防目录穿越） */
+function findTeamInbox(wsPath, teamSel) {
+  const root = path.join(wsPath || '', '.agent-teams');
+  let names = [];
+  try { names = fs.readdirSync(root); } catch { return null; }
+  for (const n of names) {
+    if (n === 'archive') continue;
+    const dir = path.join(root, n);
+    try {
+      const t = JSON.parse(fs.readFileSync(path.join(dir, 'team.json'), 'utf8'));
+      if (t.id === teamSel || t.name === teamSel || n === teamSel) return { dir, team: t };
+    } catch {}
+  }
+  return null;
+}
+const safeInboxName = (name) => String(name || '').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60);
 
 
 const projectDir = (ws) => path.join(ws.path || String(ws), '项目书');
@@ -486,7 +503,7 @@ const server = http.createServer(async (req, res) => {
       const only = url.searchParams.get('team') || '';
       const data = v2Data(ws);
       if (only) data.teams = (data.teams || []).filter((t) => t && (t.id === only || t.name === only));
-      let html = v2Page({ title: '团队架构', body: renderTeamArch(Object.assign({}, data, { single: !!only })), ws, active: '/team', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true, embed });
+      let html = v2Page({ title: '团队架构', body: renderTeamArch(Object.assign({}, data, { single: !!only, canvas: url.searchParams.get('canvas') === '1' })), ws, active: '/team', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true, embed });
       if (url.searchParams.get('canvas') === '1') html = html.replace('</head>', canvasTeamCss() + '</head>');
       if (url.searchParams.get('pane') === '1') html = html.replace('</head>', paneTeamCss() + '</head>');
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
@@ -532,6 +549,8 @@ const server = http.createServer(async (req, res) => {
       })();
       const html = renderCanvas({
         ws,
+        wsId: ws.id,
+        spaces: listWorkspaces(),
         qs: wsQS(url, ws),
         taskCount: loadTasks(ws.id).length,
         memberCount: Object.keys(counts).reduce((n, k) => n + counts[k], 0),
@@ -551,6 +570,52 @@ const server = http.createServer(async (req, res) => {
       const html = renderSpaces(stats, { current: ws.id });
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(html);
+    }
+    // 个体对话：读该成员相关的收件箱消息
+    if (req.method === 'GET' && url.pathname === '/api/member-chat') {
+      const box = findTeamInbox(ws.path, url.searchParams.get('team') || '');
+      const member = url.searchParams.get('member') || '';
+      const out = [];
+      if (box) {
+        const inbox = path.join(box.dir, 'inbox');
+        for (const f of (fs.existsSync(inbox) ? fs.readdirSync(inbox) : [])) {
+          if (!f.endsWith('.jsonl')) continue;
+          let txt = '';
+          try { txt = fs.readFileSync(path.join(inbox, f), 'utf8'); } catch { continue; }
+          for (const line of txt.split('\n')) {
+            if (!line.trim()) continue;
+            try {
+              const m = JSON.parse(line);
+              if (member && m.from !== member && m.to !== member) continue;
+              out.push(m);
+            } catch {}
+          }
+        }
+      }
+      out.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(JSON.stringify({ ok: true, messages: out.slice(-200) }));
+    }
+    // 个体对话：把「真人」的话追加进该成员的收件箱
+    if (req.method === 'POST' && url.pathname === '/api/member-chat') {
+      const payload = await body(req);
+      const member = String(payload.member || '').trim();
+      const content = String(payload.content || '').trim();
+      if (!member || !content) {
+        res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify({ ok: false, error: 'member/content required' }));
+      }
+      const box = findTeamInbox(ws.path, payload.team || '');
+      if (!box) {
+        res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify({ ok: false, error: 'team not found' }));
+      }
+      const inbox = path.join(box.dir, 'inbox');
+      fs.mkdirSync(inbox, { recursive: true });
+      const msg = { id: 'm-' + Date.now().toString(36), from: '真人', to: member, content: content.slice(0, 4000), ts: Date.now() };
+      fs.appendFileSync(path.join(inbox, safeInboxName(member) + '.jsonl'), JSON.stringify(msg) + '\n', 'utf8');
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+      return res.end(JSON.stringify({ ok: true, message: msg }));
     }
     if (req.method === 'GET' && url.pathname === '/api/session') {
       const id = url.searchParams.get('id') || '';

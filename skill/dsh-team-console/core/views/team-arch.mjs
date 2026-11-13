@@ -60,6 +60,8 @@ function roleOf(m) {
   return 'executor';
 }
 
+const STATE_TEXT = { idle: '空闲', running: '忙碌', error: '异常', archived: '归档', done: '完成' };
+
 /* 成员自身状态 → 六状态色（数据字段本身即权威；异常由 failed 任务覆盖） */
 function memberState(m) {
   const st = String((m && m.status) || '').toLowerCase();
@@ -119,10 +121,12 @@ function memberView(m, key, teamTasks, wsTasks, today) {
   const cur = pickCurrent(tm, wm);
   return {
     key,
+    id: m.id || '',
     name: m.name || '（未命名）',
     role: String(m.role || ''),
     model: String(m.model || ''),
     state,
+    statusText: STATE_TEXT[state] || STATE_TEXT.idle,
     failed,
     cur,
     prog: progressOf(cur),
@@ -184,9 +188,12 @@ function renderRoleCard(v, expanded) {
   const corner = v.failed ? '<span class="v2-corner-dot" title="存在待处理异常"></span>' : '';
   const dim = v.removed ? ' v2-dim' : '';
   const cls = expanded ? 'ta-card--expanded' : 'ta-card--collapsed v2-hoverable';
-  let html = '<div class="v2-card v2-st--' + v.state + ' ta-card ' + cls + dim + '" data-node="' + v.key + '">' + corner;
+  let html = '<div class="v2-card v2-st--' + v.state + ' ta-card ta-card--member ' + cls + dim + '" data-node="' + v.key + '"'
+    + ' data-member="' + esc(v.name) + '">' + corner;
   html += '<div class="ta-card__head"><span class="v2-dot v2-st--' + v.state + '"></span>'
-    + '<span class="ta-card__name" title="' + esc(v.name) + '">' + esc(v.name) + '</span></div>';
+    + '<span class="ta-card__name" title="' + esc(v.name) + '">' + esc(v.name) + '</span>'
+    + '<span class="ta-card__state">' + esc(v.statusText || '') + '</span></div>';
+  if (v.state === 'running') html += '<span class="ta-card__flow" aria-hidden="true"></span>';
   const sub = expanded ? v.role : v.model;
   if (sub) html += '<div class="ta-card__sub">' + esc(sub) + '</div>';
   const body = cardBody(v);
@@ -382,6 +389,16 @@ const TA_STYLE = `
 .ta-card__head { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .ta-card__name { font-size: var(--fs-14); font-weight: 600; color: var(--tx-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ta-card__sub { font-size: var(--fs-12); color: var(--tx-weak); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ta-card--member { cursor: pointer; position: relative; }
+.ta-card--member:hover { border-color: rgba(77,107,254,.36); box-shadow: 0 10px 24px rgba(77,107,254,.12); }
+.ta-card__state { margin-left: auto; flex: none; font-size: 10.5px; line-height: 1.5; padding: 0 6px; border-radius: 999px; background: var(--st-bg); color: var(--st-fg); border: 1px solid var(--st-bd); }
+.ta-view:not(.ta-view--single) .ta-card__state { display: none; }
+.ta-card__flow { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; overflow: hidden; background: rgba(77,107,254,.12); border-radius: 0 0 var(--radius-s) var(--radius-s); }
+.ta-card__flow::after { content: ""; position: absolute; top: 0; bottom: 0; width: 64%; left: -64%; background: linear-gradient(90deg, transparent, rgba(77,107,254,.35) 24%, #4d6bfe 46%, #ffffff 52%, #4d6bfe 58%, rgba(77,107,254,.35) 76%, transparent); animation: taSweep 2.1s cubic-bezier(.45,0,.55,1) infinite; box-shadow: 0 0 12px rgba(77,107,254,.55); }
+@keyframes taSweep { 0% { left: -64%; } 100% { left: 110%; } }
+.v2-st--running.ta-card { animation: taBreathe 2.4s ease-in-out infinite; }
+@keyframes taBreathe { 0%, 100% { box-shadow: 0 0 0 1px rgba(77,107,254,.14); } 50% { box-shadow: 0 0 0 1px rgba(77,107,254,.34), 0 8px 22px rgba(77,107,254,.12); } }
+@media (prefers-reduced-motion: reduce) { .ta-card__flow::after, .v2-st--running.ta-card { animation: none; } }
 .ta-card__row { display: flex; align-items: center; gap: var(--sp-2); margin-top: 6px; font-size: var(--fs-12); }
 .ta-card__row .ta-l { flex: none; width: 56px; color: var(--tx-weak); }
 .ta-card__row .ta-v { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tx-body); }
@@ -420,32 +437,34 @@ const TA_SCRIPT = `
     var run = document.createElementNS(SVGNS, "g"); run.setAttribute("class", "ta-lines-run");
     svg.appendChild(org); svg.appendChild(run);
     var cv = canvas.getBoundingClientRect();
+    var k = window.__taScale || 1;
     function edge(group, e){
       var a = q(canvas, '[data-node="' + e.from + '"]');
       var b = q(canvas, '[data-node="' + e.to + '"]');
       if (!a || !b || a === b) return;
       var ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
-      var ax = ar.left - cv.left, ay = ar.top - cv.top;
-      var bx = br.left - cv.left, by = br.top - cv.top;
+      var ax = (ar.left - cv.left) / k, ay = (ar.top - cv.top) / k;
+      var bx = (br.left - cv.left) / k, by = (br.top - cv.top) / k;
+      var aw = ar.width / k, ah = ar.height / k, bw = br.width / k, bh = br.height / k;
       var x1, y1, x2, y2, d;
-      if (by > ay + ar.height * 0.6) {
-        x1 = ax + ar.width / 2; y1 = ay + ar.height;
-        x2 = bx + br.width / 2; y2 = by;
+      if (by > ay + ah * 0.6) {
+        x1 = ax + aw / 2; y1 = ay + ah;
+        x2 = bx + bw / 2; y2 = by;
         var my = (y1 + y2) / 2;
         d = "M" + x1 + "," + y1 + " C" + x1 + "," + my + " " + x2 + "," + my + " " + x2 + "," + y2;
-      } else if (ay > by + br.height * 0.6) {
-        x1 = ax + ar.width / 2; y1 = ay;
-        x2 = bx + br.width / 2; y2 = by + br.height;
+      } else if (ay > by + bh * 0.6) {
+        x1 = ax + aw / 2; y1 = ay;
+        x2 = bx + bw / 2; y2 = by + bh;
         var my2 = (y1 + y2) / 2;
         d = "M" + x1 + "," + y1 + " C" + x1 + "," + my2 + " " + x2 + "," + my2 + " " + x2 + "," + y2;
       } else if (ax > bx) {
-        x1 = ax; y1 = ay + ar.height / 2;
-        x2 = bx + br.width; y2 = by + br.height / 2;
+        x1 = ax; y1 = ay + ah / 2;
+        x2 = bx + bw; y2 = by + bh / 2;
         var dx = Math.max(24, Math.abs(x2 - x1) / 2);
         d = "M" + x1 + "," + y1 + " C" + (x1 - dx) + "," + y1 + " " + (x2 + dx) + "," + y2 + " " + x2 + "," + y2;
       } else {
-        x1 = ax + ar.width; y1 = ay + ar.height / 2;
-        x2 = bx; y2 = by + br.height / 2;
+        x1 = ax + aw; y1 = ay + ah / 2;
+        x2 = bx; y2 = by + bh / 2;
         var dx2 = Math.max(24, Math.abs(x2 - x1) / 2);
         d = "M" + x1 + "," + y1 + " C" + (x1 + dx2) + "," + y1 + " " + (x2 - dx2) + "," + y2 + " " + x2 + "," + y2;
       }
@@ -487,6 +506,76 @@ const TA_SCRIPT = `
       drawAll();
     };
   });
+  /* 画布模式：拖动平移 + 滚轮缩放 + 点成员对话 */
+  (function(){
+    var wrap = document.getElementById("ta-panwrap");
+    var pan = document.getElementById("ta-pan");
+    if (!wrap || !pan) return;
+    var x = 0, y = 0, s = 1, down = false, sx = 0, sy = 0, ox = 0, oy = 0, moved = false;
+    var val = document.getElementById("ta-zoom-val");
+    function apply(){
+      pan.style.transform = "translate(" + x + "px," + y + "px) scale(" + s + ")";
+      window.__taScale = s;
+      if (val) val.textContent = Math.round(s * 100) + "%";
+      drawAll();
+    }
+    function clamp(n){ return Math.max(0.4, Math.min(2.4, n)); }
+    function zoomAt(ns, cx, cy){
+      ns = clamp(ns);
+      var r = wrap.getBoundingClientRect();
+      var mx = (cx == null ? r.width / 2 : cx - r.left), my = (cy == null ? r.height / 2 : cy - r.top);
+      x = mx - (mx - x) * (ns / s);
+      y = my - (my - y) * (ns / s);
+      s = ns;
+      apply();
+    }
+    wrap.addEventListener("wheel", function(e){
+      e.preventDefault();
+      zoomAt(s * Math.exp(-e.deltaY * 0.0016), e.clientX, e.clientY);
+    }, { passive: false });
+    wrap.addEventListener("pointerdown", function(e){
+      moved = false;
+      if (e.button !== 0) return;
+      if (e.target.closest(".ta-card, .ta-zoom, button, a")) return;
+      down = true; sx = e.clientX; sy = e.clientY; ox = x; oy = y;
+      wrap.classList.add("is-dragging");
+      try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    wrap.addEventListener("pointermove", function(e){
+      if (!down) return;
+      if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 3) moved = true;
+      x = ox + (e.clientX - sx); y = oy + (e.clientY - sy);
+      pan.style.transform = "translate(" + x + "px," + y + "px) scale(" + s + ")";
+    });
+    function endDrag(){ down = false; wrap.classList.remove("is-dragging"); }
+    wrap.addEventListener("pointerup", endDrag);
+    wrap.addEventListener("pointercancel", endDrag);
+    all(wrap, ".ta-zoom__btn", function(b){
+      b.addEventListener("click", function(){
+        var k = b.getAttribute("data-zoom");
+        if (k === "in") zoomAt(s * 1.2);
+        else if (k === "out") zoomAt(s / 1.2);
+        else { x = 0; y = 0; s = 1; apply(); }
+      });
+    });
+    all(wrap, ".ta-card--member", function(card){
+      card.setAttribute("tabindex", "0");
+      card.setAttribute("role", "button");
+      card.addEventListener("click", function(e){
+        if (moved) return;
+        e.stopPropagation();
+        var view = document.querySelector(".ta-view");
+        try {
+          parent.postMessage({ type: "wb-member", member: card.getAttribute("data-member") || "", team: (view && view.getAttribute("data-team")) || "", teamName: (view && view.getAttribute("data-team-name")) || "" }, "*");
+        } catch (err) {}
+      });
+      card.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); card.click(); }
+      });
+    });
+    apply();
+  })();
+
   drawAll();
   window.addEventListener("resize", drawAll);
   window.addEventListener("load", drawAll);
@@ -501,7 +590,10 @@ export function renderTeamArch(opts) {
   const teams = Array.isArray(o.teams) ? o.teams : [];
   const links = Array.isArray(o.links) ? o.links : [];
 
-  let html = '<section class="v2-root ta-view ta-lay-h' + (o.single ? ' ta-view--single' : '') + '">';
+  const teamId = o.single && teams[0] ? (teams[0].id || '') : '';
+  let html = '<section class="v2-root ta-view ta-lay-h' + (o.single ? ' ta-view--single' : '')
+    + (o.canvas ? ' ta-view--canvas' : '') + '"' + (teamId ? ' data-team="' + esc(teamId) + '"' : '')
+    + (teamId ? ' data-team-name="' + esc(teams[0].name || teamId) + '"' : '') + '>';
   html += '<style>' + TA_STYLE + '</style>';
   if (!o.single) {
     html += '<div class="ta-view__head">';
@@ -518,6 +610,7 @@ export function renderTeamArch(opts) {
     + '</div>';
   html += '</div>';
   }
+  if (o.canvas) html += '<div class="ta-panwrap" id="ta-panwrap"><div class="ta-pan" id="ta-pan">';
   html += '<div class="ta-list">';
 
   const active = teams.filter(function (t) { return t && !t.archived; });
@@ -539,6 +632,17 @@ export function renderTeamArch(opts) {
   });
 
   html += '</div>';
+  if (o.canvas) {
+    html += '</div>'
+      + '<div class="ta-zoom" role="group" aria-label="缩放">'
+      + '<button type="button" class="ta-zoom__btn" data-zoom="out" title="缩小">−</button>'
+      + '<span class="ta-zoom__val" id="ta-zoom-val">100%</span>'
+      + '<button type="button" class="ta-zoom__btn" data-zoom="in" title="放大">+</button>'
+      + '<button type="button" class="ta-zoom__btn ta-zoom__btn--reset" data-zoom="reset" title="复位">复位</button>'
+      + '</div>'
+      + '<div class="ta-pan-hint">拖动空白处平移 · 滚轮缩放 · 点成员对话</div>'
+      + '</div>';
+  }
   html += '<script>' + TA_SCRIPT + '</script>';
   html += '</section>';
   return html;
