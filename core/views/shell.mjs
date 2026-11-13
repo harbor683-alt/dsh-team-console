@@ -234,7 +234,7 @@ export function renderShell({ ws, spaces = [], qs = '', demo = false, counts = {
     + NAV.map(([id, label, lead], i) => {
       const src = embed(id === 'sec-cockpit' ? '/cockpit' : id === 'sec-stage' ? '/stage' : id === 'sec-team' ? '/team' : '/deps');
       const link = standalone(id === 'sec-cockpit' ? '/cockpit' : id === 'sec-stage' ? '/stage' : id === 'sec-team' ? '/team' : '/deps');
-      const defaultClosed = (id === 'sec-team' || id === 'sec-deps');
+      const defaultClosed = (id !== 'sec-cockpit');
       return '<section class="sec' + (defaultClosed ? ' is-closed' : '') + '" id="' + id + '">'
         + '<div class="sec__head"><h2>' + (ICONS[id] || '') + esc2(label) + '</h2>'
         + '<button class="sec__toggle" type="button" aria-expanded="true" aria-controls="' + id + '">'
