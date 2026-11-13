@@ -400,7 +400,7 @@ const TA_STYLE = `
 .ta-card__head { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .ta-card__name { font-size: var(--fs-14); font-weight: 600; color: var(--tx-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ta-card__sub { font-size: var(--fs-12); color: var(--tx-weak); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ta-card--member { cursor: pointer; position: relative; }
+.ta-card--member { cursor: pointer; position: relative; -webkit-user-select: none; user-select: none; }
 .ta-card--member:hover { border-color: rgba(77,107,254,.36); box-shadow: 0 10px 24px rgba(77,107,254,.12); }
 .ta-card__state { margin-left: auto; flex: none; font-size: 10.5px; line-height: 1.5; padding: 0 6px; border-radius: 999px; background: var(--st-bg); color: var(--st-fg); border: 1px solid var(--st-bd); }
 .ta-view:not(.ta-view--single) .ta-card__state { display: none; }
@@ -555,7 +555,8 @@ const TA_SCRIPT = `
     wrap.addEventListener("pointerdown", function(e){
       moved = false;
       if (e.button !== 0) return;
-      if (e.target.closest(".ta-card, .ta-zoom, button, a")) return;
+      if (e.target.closest(".ta-zoom, button, a, textarea, input")) return;
+      if (e.cancelable) e.preventDefault();
       down = true; sx = e.clientX; sy = e.clientY; ox = x; oy = y;
       wrap.classList.add("is-dragging");
       try { wrap.setPointerCapture(e.pointerId); } catch (err) {}

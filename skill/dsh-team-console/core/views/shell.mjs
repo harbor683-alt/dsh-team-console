@@ -102,7 +102,7 @@ export function canvasTeamCss() {
     + '.ta-view--single .ta-list{gap:0!important}'
     + '.ta-block--single .v2-st--idle{--st-main:#ef4444;--st-bg:rgba(239,68,68,.10);--st-bd:rgba(239,68,68,.26);--st-fg:#dc2626}'
     + '.ta-block--single .v2-st--running{--st-main:#22c55e;--st-bg:rgba(34,197,94,.12);--st-bd:rgba(34,197,94,.28);--st-fg:#15803d}'
-    + '.ta-view--canvas .ta-panwrap{position:fixed;inset:0;overflow:hidden;cursor:grab;touch-action:none}'
+    + '.ta-view--canvas .ta-panwrap{position:fixed;inset:0;overflow:hidden;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}'
     + '.ta-view--canvas .ta-card .v2-popover{display:none!important}'
     + '.ta-view--canvas .ta-panwrap.is-dragging{cursor:grabbing}'
     + '.ta-view--canvas .ta-pan{position:absolute;left:0;top:0;transform-origin:0 0;padding:70px 110px 90px 96px;width:max-content;min-width:100%;min-height:100%}'

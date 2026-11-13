@@ -17,7 +17,7 @@ import { renderGrill } from './views/grill.mjs';
 import * as store from './store.mjs';
 import { loadTasks, loadTeams } from './team-data.mjs';
 
-const SERVER_VERSION = 10; // 插件用它判断端口上跑的是不是新代码（旧进程会被替换）
+const SERVER_VERSION = 12; // 插件用它判断端口上跑的是不是新代码（旧进程会被替换）
 const WS = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : process.cwd();
 const PORT = Number(process.argv.find((a) => a.startsWith('--port='))?.split('=')[1] || 8787);
 // v2.css 随服务端文件走（不随 WS 参数走，临时工作区也能取到全局样式）
