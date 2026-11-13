@@ -554,4 +554,30 @@ const SCRIPT = `
     });
   }
 })();
+
+/* ---------- 成员/任务变化时静默刷新画布（保留平移缩放视角） ---------- */
+(function () {
+  var ifr = document.getElementById('cw-canvas');
+  if (!ifr) return;
+  var last = '';
+  function tick() {
+    try {
+      var u = new URL(ifr.src, location.href);
+      var ws = u.searchParams.get('ws') || '';
+      var team = u.searchParams.get('team') || '';
+      fetch('/api/team-sig?ws=' + encodeURIComponent(ws) + '&team=' + encodeURIComponent(team))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || !d.ok) return;
+          if (last && d.sig !== last) {
+            try { ifr.contentWindow.location.reload(); } catch (e) { ifr.src = u.href; }
+          }
+          last = d.sig;
+        })
+        .catch(function () {});
+    } catch (e) {}
+  }
+  tick();
+  setInterval(tick, 6000);
+})();
 `;

@@ -17,7 +17,7 @@ import { renderGrill } from './views/grill.mjs';
 import * as store from './store.mjs';
 import { loadTasks, loadTeams } from './team-data.mjs';
 
-const SERVER_VERSION = 8; // 插件用它判断端口上跑的是不是新代码（旧进程会被替换）
+const SERVER_VERSION = 10; // 插件用它判断端口上跑的是不是新代码（旧进程会被替换）
 const WS = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : process.cwd();
 const PORT = Number(process.argv.find((a) => a.startsWith('--port='))?.split('=')[1] || 8787);
 // v2.css 随服务端文件走（不随 WS 参数走，临时工作区也能取到全局样式）
@@ -462,6 +462,16 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1');
   // 每个请求各自解析工作区：?ws=id/title/path → ?sid=会话反查 → 最近会话 → 默认
   const ws = resolveWorkspace({ ws: url.searchParams.get('ws'), sid: url.searchParams.get('sid') });
+  const wsParam = url.searchParams.get('ws');
+  if (wsParam) {
+    const known = listWorkspaces().some((w) => w.id === wsParam || w.title === wsParam);
+    let isDir = false;
+    try { isDir = fs.statSync(wsParam).isDirectory(); } catch { /* gone */ }
+    if (!known && !isDir) {
+      res.writeHead(404, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>工作区已删除</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f7f9fc;font:14px/1.6 system-ui,sans-serif;color:#353638}.box{text-align:center}.box b{display:block;font-size:18px;color:#16181d;margin-bottom:6px}.box a{color:#4d6bfe;text-decoration:none}</style></head><body><div class="box"><b>这个工作区已经不在了</b><div>它可能被删除或改名，工作台不再显示。</div><div style="margin-top:10px"><a href="/spaces">看看其他工作区 →</a></div></div></body></html>');
+    }
+  }
   // 对账自愈已退役（t11）；healed 固定空值保持 /api/data、/api/version 对外 JSON 形状不变
   const healed = { healed: 0, titles: [] };
   // 每个请求先确保自有存储已就绪（首次自动从账本与团队文件导入；损坏自动重建）
@@ -572,6 +582,27 @@ const server = http.createServer(async (req, res) => {
       return res.end(html);
     }
     // 个体对话：读该成员相关的收件箱消息
+    if (req.method === 'GET' && url.pathname === '/api/team-sig') {
+      const sel = String(url.searchParams.get('team') || '').trim();
+      let sig = '';
+      if (sel) {
+        const hit = findTeamInbox(ws.path, sel);
+        if (!hit) {
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+          return res.end(JSON.stringify({ ok: true, sig: 'gone' }));
+        }
+        let st = null;
+        try { st = fs.statSync(path.join(hit.dir, 'team.json')); } catch {}
+        const m = (hit.team && hit.team.members) || [];
+        sig = (st ? st.mtimeMs + ':' + st.size : '0') + ':' + m.length;
+      } else {
+        let st = null;
+        try { st = fs.statSync(path.join(ws.path, '.agent-teams')); } catch {}
+        sig = st ? String(st.mtimeMs) : '0';
+      }
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(JSON.stringify({ ok: true, sig }));
+    }
     if (req.method === 'GET' && url.pathname === '/api/member-chat') {
       const box = findTeamInbox(ws.path, url.searchParams.get('team') || '');
       const member = url.searchParams.get('member') || '';

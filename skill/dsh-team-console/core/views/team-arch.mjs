@@ -377,6 +377,17 @@ const TA_STYLE = `
 .ta-block__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-2); }
 .ta-block__name { font-size: var(--fs-16); font-weight: 600; color: var(--tx-strong); }
 .ta-block__modes { display: flex; gap: var(--sp-2); }
+.ta-modes-fixed{position:fixed;top:62px;right:18px;z-index:12;display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.92);border:1px solid rgba(22,24,29,.08);box-shadow:0 8px 24px rgba(35,42,53,.10);backdrop-filter:blur(10px)}
+.ta-modes-fixed .v2-btn{height:26px;padding:0 11px;font-size:11.5px;border-radius:999px;background:transparent;border:0}
+.ta-modes-fixed .v2-btn.v2-selected{background:var(--c-running);color:#fff}
+.ta-view--canvas .ta-block__modes{display:none!important}
+.ta-edge--flow{stroke-dasharray:6 6;animation:taFlow .9s linear infinite}
+@keyframes taFlow{to{stroke-dashoffset:-12}}
+.ta-view--canvas .ta-card{animation:taIn .36s cubic-bezier(.2,.8,.3,1) both}
+@keyframes taIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
+.ta-card.v2-st--running::after{content:"";position:absolute;left:0;top:0;right:0;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(77,107,254,.9),transparent);background-size:45% 100%;background-repeat:no-repeat;animation:taTopFlow 1.9s linear infinite;pointer-events:none}
+@keyframes taTopFlow{from{background-position:-60% 0}to{background-position:160% 0}}
+@media (prefers-reduced-motion: reduce){.ta-edge--flow,.ta-card.v2-st--running::after,.ta-view--canvas .ta-card{animation:none!important}}
 .ta-block__hint { font-size: var(--fs-12); color: var(--tx-weak); margin-top: var(--sp-2); }
 .ta-canvas { position: relative; overflow-x: auto; padding-bottom: 190px; margin-bottom: -190px; }
 .ta-stage { display: flex; flex-direction: column; align-items: center; gap: 56px; padding: 40px 24px 28px; min-width: 560px; }
@@ -472,7 +483,8 @@ const TA_SCRIPT = `
       p.setAttribute("d", d);
       p.setAttribute("fill", "none");
       p.setAttribute("stroke-width", "1.5");
-      p.setAttribute("class", e.cls);
+      var flow = (b.classList && b.classList.contains("v2-st--running")) || (a.classList && a.classList.contains("v2-st--running"));
+      p.setAttribute("class", e.cls + (flow ? " ta-edge--flow" : ""));
       p.setAttribute("marker-end", "url(#" + e.marker + ")");
       group.appendChild(p);
     }
@@ -487,8 +499,7 @@ const TA_SCRIPT = `
       if (!canvas) return;
       var run = btn.getAttribute("data-mode") === "run";
       if (run) { canvas.classList.add("ta-run"); } else { canvas.classList.remove("ta-run"); }
-      var block = btn.closest(".ta-block");
-      if (block) all(block, ".ta-toggle", function(b){ b.classList.remove("v2-selected"); });
+      all(document, '.ta-toggle[data-target="' + btn.getAttribute("data-target") + '"]', function(b){ b.classList.remove("v2-selected"); });
       btn.classList.add("v2-selected");
       draw(canvas);
     };
@@ -513,10 +524,18 @@ const TA_SCRIPT = `
     if (!wrap || !pan) return;
     var x = 0, y = 0, s = 1, down = false, sx = 0, sy = 0, ox = 0, oy = 0, moved = false;
     var val = document.getElementById("ta-zoom-val");
+    try {
+      var savedPan = JSON.parse(localStorage.getItem("cw-pan") || "null");
+      if (savedPan && typeof savedPan.s === "number") {
+        x = Number(savedPan.x) || 0; y = Number(savedPan.y) || 0;
+        s = Math.max(0.4, Math.min(2.4, savedPan.s));
+      }
+    } catch (err) {}
     function apply(){
       pan.style.transform = "translate(" + x + "px," + y + "px) scale(" + s + ")";
       window.__taScale = s;
       if (val) val.textContent = Math.round(s * 100) + "%";
+      try { localStorage.setItem("cw-pan", JSON.stringify({ x: x, y: y, s: s })); } catch (err) {}
       drawAll();
     }
     function clamp(n){ return Math.max(0.4, Math.min(2.4, n)); }
@@ -633,8 +652,14 @@ export function renderTeamArch(opts) {
 
   html += '</div>';
   if (o.canvas) {
-    html += '</div>'
-      + '<div class="ta-zoom" role="group" aria-label="缩放">'
+    html += '</div>';
+    if (teamId) {
+      html += '<div class="ta-modes-fixed" role="group" aria-label="视图模式">'
+        + '<button type="button" class="v2-btn ta-toggle v2-selected" data-target="tac-0" data-mode="org">编制视图</button>'
+        + '<button type="button" class="v2-btn ta-toggle" data-target="tac-0" data-mode="run">运行视图</button>'
+        + '</div>';
+    }
+    html += '<div class="ta-zoom" role="group" aria-label="缩放">'
       + '<button type="button" class="ta-zoom__btn" data-zoom="out" title="缩小">−</button>'
       + '<span class="ta-zoom__val" id="ta-zoom-val">100%</span>'
       + '<button type="button" class="ta-zoom__btn" data-zoom="in" title="放大">+</button>'
