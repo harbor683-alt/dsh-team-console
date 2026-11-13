@@ -1,12 +1,12 @@
 // 工作区登记表：把"每个工作区各有一个工作台"落到数据层
-// 登记表：<DSH_HOME>\storages\workspace.json → tables.workspaces
-// 会话目录：.dsh\sessions\<路径转义目录>\<sid>\session.v4.jsonl.zstd（目录名形如 --E-~4F5C~54C1-deepseek--）
+// 登记表：<DSH_HOME>/storages/workspace.json → tables.workspaces
+// 会话目录：<DSH_HOME>/sessions/<路径转义目录>/<sid>/session.v4.jsonl.zstd
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 export const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh');
-export const DEFAULT_WS_PATH = process.env.WORKBENCH_DEFAULT_WS || process.cwd();
+export const DEFAULT_WS_PATH = process.env.WORKBENCH_WS || process.cwd();
 const REG = path.join(DSH_HOME, 'storages', 'workspace.json');
 const SESS = path.join(DSH_HOME, 'sessions');
 
@@ -26,7 +26,7 @@ export function listWorkspaces() {
     const title = (typeof v === 'object' && (v.title || v.name)) || path.basename(p);
     out.push({ id, path: p, title });
   }
-  if (!out.length) out.push({ id: 'default', path: DEFAULT_WS_PATH, title: path.basename(DEFAULT_WS_PATH) });
+  if (!out.length) out.push({ id: 'default', path: DEFAULT_WS_PATH, title: 'deepseek' });
   return out;
 }
 
@@ -36,7 +36,7 @@ export function defaultWorkspaceId() {
   return hit ? hit.id : (list[0] ? list[0].id : null);
 }
 
-// --E-~4F5C~54C1-demo-- → E:\demo（示例：目录名内的 Unicode 转义还原）
+// --E-~4F5C~54C1-deepseek-- → E:\作品\deepseek
 export function sessionDirToPath(name) {
   const s = String(name || '');
   if (s.length < 4 || !s.startsWith('--') || !s.endsWith('--')) return null;
@@ -90,7 +90,7 @@ function newestSession() {
 }
 
 // 优先级：?ws=（id / 标题 / 路径）→ ?sid=（会话反查工作区）→ 最近改动过的会话 → 默认工作区
-export function resolveWorkspace({ ws, sid, fallback } = {}) {
+export function resolveWorkspace({ ws, sid } = {}) {
   const list = listWorkspaces();
   if (ws) {
     const key = String(ws);
@@ -107,16 +107,10 @@ export function resolveWorkspace({ ws, sid, fallback } = {}) {
       if (w) return w;
     }
   }
-  if (fallback) {
-    try {
-      const p = path.resolve(fallback);
-      if (fs.statSync(p).isDirectory()) return { id: null, path: p, title: path.basename(p) };
-    } catch { /* CLI 工作区不存在就继续按登记表解析 */ }
-  }
   const recent = newestSession();
   if (recent) {
     const w = workspaceForSessionDir(recent.dir);
     if (w) return w;
   }
-  return list.find((w) => samePath(w.path, DEFAULT_WS_PATH)) || list[0] || { id: null, path: DEFAULT_WS_PATH, title: path.basename(DEFAULT_WS_PATH) };
+  return list.find((w) => samePath(w.path, DEFAULT_WS_PATH)) || list[0] || { id: null, path: DEFAULT_WS_PATH, title: 'deepseek' };
 }

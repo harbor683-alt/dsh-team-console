@@ -1,6 +1,6 @@
 # dsh-team-console 技能包
 
-把 V2.0 团队控制台安装成一个 DSH 技能。技能包自带可运行的 `core/`，装完即可用，不需要另外维护工作区里的 `team-view/`。
+把「流氏工作台」安装成一个 DSH 技能。技能包自带可运行的 `core/`，装完即可用，不需要另外维护工作区里的 `team-view/`。
 
 ## 包含什么
 
@@ -14,54 +14,24 @@ dsh-team-console/
    └─ start-workbench.sh     macOS / Linux 启动器
 ```
 
-## 安装
-
-### 从仓库目录
-
-```powershell
-$src = ".\skill\dsh-team-console"
-$dst = "$env:USERPROFILE\.dsh\skills\dsh-team-console"
-New-Item -ItemType Directory -Force -Path $dst | Out-Null
-Copy-Item "$src\*" $dst -Recurse -Force
-```
-
-```bash
-mkdir -p "${DSH_HOME:-$HOME/.dsh}/skills/dsh-team-console"
-cp -R skill/dsh-team-console/. "${DSH_HOME:-$HOME/.dsh}/skills/dsh-team-console/"
-```
-
-### 从 Release zip
-
-下载 `dsh-team-console-skill.zip`，解压后应得到顶层目录 `dsh-team-console/`；把它整体放到 `%USERPROFILE%\.dsh\skills\`（macOS / Linux 为 `$DSH_HOME/skills/`）。重启 DSH 生效。
-
-## 启动
+## 快速开始
 
 ```bat
-"%USERPROFILE%\.dsh\skills\dsh-team-console\scripts\start-workbench.bat" "D:\your-workspace" 8787
+scripts\start-workbench.bat <工作区路径> 8787
 ```
 
 ```bash
-sh "$HOME/.dsh/skills/dsh-team-console/scripts/start-workbench.sh" "/path/to/workspace" 8787
+sh scripts/start-workbench.sh <工作区路径> 8787
 ```
 
-- 第一个参数是工作区，省略时用当前目录。
-- 第二个参数是端口，默认 `8787`，只接受 `1–65535`。
-- 脚本会检查 Node ≥ 20、启动服务、轮询 `/api/health`，健康后打开 `http://127.0.0.1:<port>/`。
+打开 <http://127.0.0.1:8787/>：团队关系图画布打底，左上角四枚方块（驾驶舱 / 项目书 / 拷问台 / 团队架构），底部依赖泳道可折叠。
 
 ## 数据
 
-- 任务存储默认 `%USERPROFILE%\.dsh\team-console\board.json`，可用 `WORKBENCH_BOARD` 覆盖。
-- 首次启动从本机账本与 `<workspace>/.agent-teams` 导入一次；之后以 `board.json` 为准。
-- 升级或卸载技能都不会删除 `board.json`。
+- 团队与项目书：只读 `<workspace>/.agent-teams/` 与 `<workspace>/项目书/`；
+- 任务状态：写 `%USERPROFILE%\.dsh\team-console\board.json`（或 `$DSH_HOME/team-console/board.json`）；
+- 升级 / 卸载技能都不会删这份数据。
 
-## 卸载
+## 完整文档
 
-1. 结束监听对应端口的 `node` 进程。
-2. 删除 `%USERPROFILE%\.dsh\skills\dsh-team-console`（macOS / Linux：`$DSH_HOME/skills/dsh-team-console`）。
-3. 需要彻底清理时，再删除 `%USERPROFILE%\.dsh\team-console\board.json`。
-
-## 注意
-
-- 单机、单进程、仅监听 `127.0.0.1`，不要暴露到公网。
-- 不修改工作区里的 `.agent-teams/` 与账本；页面写入走 `POST /api/action`。
-- 技能包与仓库 `core/` 保持同一份实现；发布时由 `PUBLISH.md` 的同步步骤生成副本。
+安装、路由、排障与设计说明见 `SKILL.md`；仓库级说明见根目录 `README.md`。

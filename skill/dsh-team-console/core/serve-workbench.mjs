@@ -4,23 +4,97 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { render, loadTasks, loadTeams } from './workbench.mjs';
-import { renderConsole } from './console.mjs';
-import { renderOrchestra } from './orchestra.mjs';
-import { renderStage, renderSpaces } from './stage.mjs';
+import { renderSpaces } from './views/spaces.mjs';
 import { listWorkspaces, resolveWorkspace } from './workspaces.mjs';
 import { renderCockpit } from './views/cockpit.mjs';
 import { renderKanban } from './views/kanban.mjs';
 import { renderTeamArch } from './views/team-arch.mjs';
 import { renderDepSwim } from './views/dep-swim.mjs';
-import { renderShell, embedCss, stageEmbedCss } from './views/shell.mjs';
+import { embedCss, canvasTeamCss, canvasDrawerCss, paneTeamCss } from './views/shell.mjs';
+import { renderCanvas } from './views/canvas.mjs';
+import { renderProjects } from './views/projects.mjs';
+import { renderGrill } from './views/grill.mjs';
 import * as store from './store.mjs';
+import { loadTasks, loadTeams } from './team-data.mjs';
 
-const SERVER_VERSION = 2; // 插件用它判断端口上跑的是不是新代码（旧进程会被替换）
+const SERVER_VERSION = 5; // 插件用它判断端口上跑的是不是新代码（旧进程会被替换）
 const WS = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : process.cwd();
 const PORT = Number(process.argv.find((a) => a.startsWith('--port='))?.split('=')[1] || 8787);
 // v2.css 随服务端文件走（不随 WS 参数走，临时工作区也能取到全局样式）
 const V2_CSS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'styles', 'v2.css');
+
+/* ---------------------------------------------------------------------------
+ * 拷问台（设计树）：数据按工作区存 data/grill-<ws>.json，页面读写都走 /api/grill。
+ * 与 project-kickoff 技能同一份判据：问题带 ➡️ 推荐答案，答完生成 project-card.md。
+ * ------------------------------------------------------------------------- */
+const GRILL_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'data');
+const safeFileId = (v) => String(v || 'default').replace(/[^\w\u4e00-\u9fa5.-]+/g, '_').slice(0, 60) || 'default';
+const grillFile = (ws) => path.join(GRILL_DIR, 'grill-' + safeFileId(ws && (ws.id || ws.path)) + '.json');
+
+function readGrill(ws) {
+  try {
+    const d = JSON.parse(fs.readFileSync(grillFile(ws), 'utf8'));
+    return { ws: ws.id, updated: d.updated || 0, rounds: Array.isArray(d.rounds) ? d.rounds : [] };
+  } catch {
+    return { ws: ws.id, updated: 0, rounds: [] };
+  }
+}
+
+function writeGrill(ws, data) {
+  try { fs.mkdirSync(GRILL_DIR, { recursive: true }); } catch {}
+  const out = { ws: ws.id, updated: Date.now(), rounds: Array.isArray(data.rounds) ? data.rounds : [] };
+  fs.writeFileSync(grillFile(ws), JSON.stringify(out, null, 2), 'utf8');
+  return out;
+}
+
+function grillCount(out) {
+  let total = 0;
+  let settled = 0;
+  (out.rounds || []).forEach((r) => (r.questions || []).forEach((q) => {
+    total += 1;
+    if (q.status === 'settled') settled += 1;
+  }));
+  return { total, settled };
+}
+
+/* 第一轮模板：只问「不答就没法动手」的六件事 */
+function grillStarterRound() {
+  const q = (id, title, body, rec) => ({ id, title, body, rec, answer: '', status: 'open' });
+  return {
+    id: 'r1',
+    title: '先把要做什么钉死',
+    note: '这一轮全是前置条件已定、现在就能回答的问题',
+    questions: [
+      q('Q1', '交付形态是什么？放在哪？', '页面 / 插件 / 脚本 / 文档？做完我从哪里打开它。', '先做成工作台里的一页（/grill），再决定要不要进插件侧栏；文件都落在工作区内'),
+      q('Q2', '谁在什么时候用它？', '说一个具体场景，不要“以后可能用得上”。', '接新任务时先过一遍，答完直接生成 project-card.md 带进执行'),
+      q('Q3', '三条硬判据（可数 / 可看 / 可对照）', '答不出这三条就先别开工。', '① 页面能打开、能保存 ② 答完能生成 project-card.md ③ 首条消息能一键复制'),
+      q('Q4', '绝对不许动的东西？', '路径、数据、配置、别的工作区。', '不动 ~/.dsh 里已有技能；不动 board.json 的任务数据；不动工作区外的文件'),
+      q('Q5', '自主度：哪一步必须停下来问？', '默认每阶段确认。', '默认每阶段确认；装依赖、删文件、改全局配置必须先问'),
+      q('Q6', '证据与回滚点', '验收看什么证据，翻车怎么退。', '/api/health 与页面截图为准；回滚用 git 提交或 v2-backup 三文件'),
+    ],
+  };
+}
+
+/* 把已答的内容压成 project-card.md：未答项照留（推荐值），不替用户补 */
+function grillCardMarkdown(ws, data) {
+  const day = new Date().toISOString().slice(0, 10);
+  const out = [];
+  out.push('# project-card（' + (ws.title || ws.id || '') + '）');
+  out.push('');
+  out.push('> 由拷问台生成于 ' + day + '；未答项保留推荐值，不要自行补。');
+  out.push('');
+  (data.rounds || []).forEach((r, i) => {
+    const rt = String(r.title || '');
+    out.push('## ' + (/^第\s*\d+\s*轮/.test(rt) ? rt : '第 ' + (i + 1) + ' 轮 · ' + rt));
+    out.push('');
+    (r.questions || []).forEach((q) => {
+      const a = String(q.answer || '').trim();
+      out.push('- **' + q.id + ' ' + q.title + '**：' + (a || '（未答 · 推荐：' + (q.rec || '—') + '）'));
+    });
+    out.push('');
+  });
+  return out.join('\n');
+}
 // 镜像回写账本默认开启（保持 DSH 左栏一致）；--no-mirror-ledger 关闭。读路径完全不依赖账本。
 const MIRROR = !process.argv.includes('--no-mirror-ledger');
 
@@ -173,7 +247,7 @@ const V2_NAV_CSS = '<style>'
   + '</style>';
 
 function v2NavHtml({ ws, active, qs, spaces, showCreate }) {
-  const items = [['/', '工作台'], ['/cockpit', '驾驶舱'], ['/kanban', '任务看板'], ['/team', '团队架构'], ['/deps', '依赖泳道']];
+  const items = [['/', '首页'], ['/cockpit', '驾驶舱'], ['/projects', '项目书'], ['/grill', '拷问台'], ['/kanban', '任务看板'], ['/team', '团队架构'], ['/deps', '依赖泳道']];
   const links = items.map(([href, label]) =>
     '<a class="v2-nav__item' + (active === href ? ' on' : '') + '" href="' + href + qs + '">' + label + '</a>').join('');
   const others = (spaces || []).filter((s) => (s.id || s.path) !== (ws.id || ws.path));
@@ -183,7 +257,7 @@ function v2NavHtml({ ws, active, qs, spaces, showCreate }) {
     : '';
   return V2_NAV_CSS
     + '<nav class="v2-nav"><div class="v2-nav__inner">'
-    + '<span class="v2-nav__brand">工作台 V2</span>'
+    + '<span class="v2-nav__brand">流氏工作台</span>'
     + links
     + '<span class="v2-nav__sep"></span>'
     + '<span class="v2-nav__ws">🗂 工作区 <b>' + esc2(ws.title || ws.id || '默认') + '</b></span>'
@@ -376,33 +450,30 @@ const server = http.createServer(async (req, res) => {
   // 每个请求先确保自有存储已就绪（首次自动从账本与团队文件导入；损坏自动重建）
   store.readBoard(ws.path);
   try {
-    if (req.method === 'GET' && (url.searchParams.get('view') === 'stage' || url.pathname === '/stage')) {
-      const embed = url.searchParams.get('embed') === '1';
-      let html = renderStage(ws, { demo: url.searchParams.has('demo'), spaces: listWorkspaces() });
-      if (embed) html = html.replace('</head>', stageEmbedCss() + '</head>');
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-      return res.end(html);
-    }
-    if (req.method === 'GET' && url.searchParams.get('view') === 'orchestra') {
-      const html = renderOrchestra(ws.path, { demo: url.searchParams.has('demo') });
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-      return res.end(html);
-    }
-    if (req.method === 'GET' && url.searchParams.get('view') === 'console') {
-      const html = renderConsole(ws.path, { demo: url.searchParams.has('demo') });
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-      return res.end(html);
-    }
-    if (req.method === 'GET' && url.pathname === '/classic') {
-      const html = render(ws.path, { demo: url.searchParams.has('demo') });
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-      return res.end(html);
-    }
     if (req.method === 'GET' && url.pathname === '/styles/v2.css') {
       let css = '';
       try { css = fs.readFileSync(V2_CSS, 'utf8'); } catch (e) { throw new Error('v2.css not found: ' + e.message); }
       res.writeHead(200, { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(css);
+    }
+    if (req.method === 'GET' && url.pathname === '/projects') {
+      const embed = url.searchParams.get('embed') === '1';
+      const dir = projectDir(ws);
+      const projects = listProjectFiles(ws).map((f) => {
+        let st = null;
+        try { st = fs.statSync(path.join(dir, f)); } catch {}
+        return { name: f.replace(/[.]md$/, ''), mtime: st ? st.mtimeMs : 0, size: st ? st.size : 0 };
+      });
+      const html = v2Page({ title: '项目书', body: renderProjects({ ws, projects, current: projects[0] && projects[0].name, embed }), ws, active: '/projects', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: false, embed });
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(html);
+    }
+    if (req.method === 'GET' && url.pathname === '/grill') {
+      const embed = url.searchParams.get('embed') === '1';
+      const data = readGrill(ws);
+      const html = v2Page({ title: '拷问台', body: renderGrill({ ws, rounds: data.rounds, updated: data.updated, embed }), ws, active: '/grill', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: false, embed });
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(html);
     }
     if (req.method === 'GET' && url.pathname === '/kanban') {
       const embed = url.searchParams.get('embed') === '1';
@@ -412,13 +483,19 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && url.pathname === '/team') {
       const embed = url.searchParams.get('embed') === '1';
-      const html = v2Page({ title: '团队架构', body: renderTeamArch(v2Data(ws)), ws, active: '/team', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true, embed });
+      const only = url.searchParams.get('team') || '';
+      const data = v2Data(ws);
+      if (only) data.teams = (data.teams || []).filter((t) => t && (t.id === only || t.name === only));
+      let html = v2Page({ title: '团队架构', body: renderTeamArch(Object.assign({}, data, { single: !!only })), ws, active: '/team', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true, embed });
+      if (url.searchParams.get('canvas') === '1') html = html.replace('</head>', canvasTeamCss() + '</head>');
+      if (url.searchParams.get('pane') === '1') html = html.replace('</head>', paneTeamCss() + '</head>');
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(html);
     }
     if (req.method === 'GET' && url.pathname === '/deps') {
       const embed = url.searchParams.get('embed') === '1';
-      const html = v2Page({ title: '依赖泳道', body: renderDepSwim(v2Data(ws)), ws, active: '/deps', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true, embed });
+      let html = v2Page({ title: '依赖泳道', body: renderDepSwim(v2Data(ws)), ws, active: '/deps', qs: wsQS(url, ws), spaces: listWorkspaces(), showCreate: true, embed });
+      if (url.searchParams.get('drawer') === '1') html = html.replace('</head>', canvasDrawerCss() + '</head>');
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(html);
     }
@@ -435,36 +512,33 @@ const server = http.createServer(async (req, res) => {
       return res.end(html);
     }
     if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
-      // 单页工作台壳：一个界面 = 驾驶舱 + 项目书/任务（V1 原布局） + 团队架构 + 依赖泳道
-      const html = renderShell({
+      // 流氏工作台：一整张画布 = 团队关系图；左上小方块开驾驶舱/项目书/团队；底部折叠依赖泳道
+      const counts = (() => {
+        // 与驾驶舱"队伍在岗"同源：按团队成员状态计数，保证两处数字一致
+        const c = { idle: 0, running: 0, done: 0, error: 0, decision: 0, archived: 0 };
+        const key = (s) => {
+          const st = String(s || '').toLowerCase();
+          if (st === 'working' || st === 'busy' || st === 'running') return 'running';
+          if (st === 'done' || st === 'completed' || st === 'complete') return 'done';
+          if (st === 'failed' || st === 'error' || st === 'blocked') return 'error';
+          if (st === 'waiting' || st === 'paused' || st === 'decision') return 'decision';
+          if (st === 'archived') return 'archived';
+          return 'idle';
+        };
+        loadTeams(ws.path).forEach((t) => {
+          (t.members || []).forEach((m) => { c[key(m.status)] += 1; });
+        });
+        return c;
+      })();
+      const html = renderCanvas({
         ws,
-        spaces: listWorkspaces(),
         qs: wsQS(url, ws),
-        demo: url.searchParams.has('demo'),
         taskCount: loadTasks(ws.id).length,
-        counts: (() => {
-          // 与驾驶舱"队伍在岗"同源：按团队成员状态计数，保证两处数字一致
-          const c = { idle: 0, running: 0, done: 0, error: 0, decision: 0, archived: 0 };
-          const key = (s) => {
-            const st = String(s || '').toLowerCase();
-            if (st === 'working' || st === 'busy' || st === 'running') return 'running';
-            if (st === 'done' || st === 'completed' || st === 'complete') return 'done';
-            if (st === 'failed' || st === 'error' || st === 'blocked') return 'error';
-            if (st === 'waiting' || st === 'paused' || st === 'decision') return 'decision';
-            if (st === 'archived') return 'archived';
-            return 'idle';
-          };
-          loadTeams(ws.path).forEach((t) => {
-            (t.members || []).forEach((m) => { c[key(m.status)] += 1; });
-          });
-          return c;
-        })(),
+        memberCount: Object.keys(counts).reduce((n, k) => n + counts[k], 0),
+        projectCount: listProjectFiles(ws).length,
+        teams: loadTeams(ws.path),
+        team: url.searchParams.get('team') || '',
       });
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-      return res.end(html);
-    }
-    if (req.method === 'GET' && url.pathname === '/legacy') {
-      const html = renderStage(ws, { demo: url.searchParams.has('demo'), spaces: listWorkspaces() });
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(html);
     }
@@ -522,6 +596,44 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/data') {
       res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(JSON.stringify(Object.assign(v2Data(ws), { healed })));
+    }
+    if (req.method === 'GET' && url.pathname === '/api/grill') {
+      const data = readGrill(ws);
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(JSON.stringify(Object.assign({ ok: true, ws: ws.id }, data, grillCount(data))));
+    }
+    if (req.method === 'POST' && url.pathname === '/api/grill') {
+      const payload = await body(req);
+      const op = payload.op || 'save';
+      const cur = readGrill(ws);
+      if (op === 'seed') {
+        if (!cur.rounds.length) cur.rounds = [grillStarterRound()];
+        const out = writeGrill(ws, cur);
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify(Object.assign({ ok: true }, grillCount(out))));
+      }
+      if (op === 'save') {
+        const answers = payload.answers && typeof payload.answers === 'object' ? payload.answers : {};
+        (cur.rounds || []).forEach((r) => (r.questions || []).forEach((q) => {
+          const a = answers[q.id];
+          if (a && typeof a === 'object') {
+            if (typeof a.answer === 'string') q.answer = a.answer;
+            q.status = a.status === 'settled' ? 'settled' : 'open';
+          }
+        }));
+        const out = writeGrill(ws, cur);
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify(Object.assign({ ok: true }, grillCount(out))));
+      }
+      if (op === 'card') {
+        const md = grillCardMarkdown(ws, cur);
+        const p = path.join(ws.path || WS, 'project-card.md');
+        fs.writeFileSync(p, md, 'utf8');
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify({ ok: true, path: p, markdown: md }));
+      }
+      res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' });
+      return res.end(JSON.stringify({ ok: false, error: 'unknown op: ' + op }));
     }
     if (req.method === 'POST' && url.pathname === '/api/resync') {
       // 手动触发重新导入（账本/团队文件被外部改动后按需同步；deleted 中的任务不会复活）

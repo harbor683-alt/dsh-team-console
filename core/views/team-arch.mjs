@@ -251,7 +251,7 @@ function resolveEndpoint(x, maps) {
 }
 
 /* 单个团队 → 一个架构画布块 */
-function renderTeamBlock(team, n, wsTasks, links) {
+function renderTeamBlock(team, n, wsTasks, links, single) {
   const members = (team.members || []).filter(Boolean);
   const teamTasks = (team.tasks || []).filter(Boolean);
   const today = todayKey();
@@ -318,9 +318,9 @@ function renderTeamBlock(team, n, wsTasks, links) {
   const canvasId = 'tac-' + n;
   const edgeJson = JSON.stringify({ org, run }).split('</').join('&lt;/');
 
-  let html = '<article class="ta-block">';
+  let html = '<article class="ta-block' + (single ? ' ta-block--single' : '') + '">';
   html += '<header class="ta-block__bar">';
-  html += '<div class="ta-block__name">' + esc(team.name || team.id || '（未命名团队）') + '</div>';
+  if (!single) html += '<div class="ta-block__name">' + esc(team.name || team.id || '（未命名团队）') + '</div>';
   html += '<div class="ta-block__modes">'
     + '<button type="button" class="v2-btn ta-toggle v2-selected" data-target="' + canvasId + '" data-mode="org">编制视图</button>'
     + '<button type="button" class="v2-btn ta-toggle" data-target="' + canvasId + '" data-mode="run">运行视图</button>'
@@ -501,9 +501,10 @@ export function renderTeamArch(opts) {
   const teams = Array.isArray(o.teams) ? o.teams : [];
   const links = Array.isArray(o.links) ? o.links : [];
 
-  let html = '<section class="v2-root ta-view ta-lay-h">';
+  let html = '<section class="v2-root ta-view ta-lay-h' + (o.single ? ' ta-view--single' : '') + '">';
   html += '<style>' + TA_STYLE + '</style>';
-  html += '<div class="ta-view__head">';
+  if (!o.single) {
+    html += '<div class="ta-view__head">';
   html += '<div class="ta-view__head-main">';
   html += '<div class="ta-view__title">团队架构</div>';
   html += '<div class="ta-view__hint">默认横向（左→右）：真人 → 主控 → 执行层；'
@@ -516,6 +517,7 @@ export function renderTeamArch(opts) {
     + '<button type="button" class="v2-btn ta-layout" data-lay="v">纵向</button>'
     + '</div>';
   html += '</div>';
+  }
   html += '<div class="ta-list">';
 
   const active = teams.filter(function (t) { return t && !t.archived; });
@@ -526,10 +528,10 @@ export function renderTeamArch(opts) {
   }
 
   active.forEach(function (team, n) {
-    html += renderTeamBlock(team, n, tasks, links);
+    html += renderTeamBlock(team, n, tasks, links, !!o.single);
   });
 
-  archived.forEach(function (team) {
+  if (!o.single) archived.forEach(function (team) {
     html += '<article class="ta-block ta-block--archived"><header class="ta-block__bar">'
       + '<div class="ta-block__name">' + esc(team.name || team.id || '（未命名团队）') + '</div>'
       + '<span class="v2-tag v2-st--archived">已归档</span>'
