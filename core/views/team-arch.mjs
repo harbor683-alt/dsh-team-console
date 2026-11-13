@@ -522,7 +522,7 @@ const TA_SCRIPT = `
     var wrap = document.getElementById("ta-panwrap");
     var pan = document.getElementById("ta-pan");
     if (!wrap || !pan) return;
-    var x = 0, y = 0, s = 1, down = false, sx = 0, sy = 0, ox = 0, oy = 0, moved = false;
+    var x = 0, y = 0, s = 1, down = false, sx = 0, sy = 0, ox = 0, oy = 0, moved = false, pid = null;
     var val = document.getElementById("ta-zoom-val");
     try {
       var savedPan = JSON.parse(localStorage.getItem("cw-pan") || "null");
@@ -556,18 +556,19 @@ const TA_SCRIPT = `
       moved = false;
       if (e.button !== 0) return;
       if (e.target.closest(".ta-zoom, button, a, textarea, input")) return;
-      if (e.cancelable) e.preventDefault();
-      down = true; sx = e.clientX; sy = e.clientY; ox = x; oy = y;
-      wrap.classList.add("is-dragging");
-      try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
+      down = true; pid = e.pointerId; sx = e.clientX; sy = e.clientY; ox = x; oy = y;
     });
     wrap.addEventListener("pointermove", function(e){
       if (!down) return;
       if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 3) moved = true;
+      if (moved && pid !== null) {
+        try { wrap.setPointerCapture(pid); } catch (err) {}
+        wrap.classList.add("is-dragging");
+      }
       x = ox + (e.clientX - sx); y = oy + (e.clientY - sy);
       pan.style.transform = "translate(" + x + "px," + y + "px) scale(" + s + ")";
     });
-    function endDrag(){ down = false; wrap.classList.remove("is-dragging"); }
+    function endDrag(){ down = false; pid = null; wrap.classList.remove("is-dragging"); }
     wrap.addEventListener("pointerup", endDrag);
     wrap.addEventListener("pointercancel", endDrag);
     all(wrap, ".ta-zoom__btn", function(b){
